@@ -1,8 +1,7 @@
+DROP FUNCTION if exists z_auto_add_primary_key() CASCADE;
 
--- Trigger Function: z_auto_add_primary_key()
-DROP FUNCTION IF EXISTS z_auto_add_primary_key() cascade;
 CREATE OR REPLACE FUNCTION z_auto_add_primary_key()
-  RETURNS event_trigger AS
+    RETURNS event_trigger AS
 $BODY$
 DECLARE
     has_index boolean;
@@ -35,28 +34,28 @@ BEGIN
         IF missing_primary_key=True
         THEN
             --RAISE NOTICE 'IS MISSING PRIMARY KEY';
-            _seq = format('%I_uid_seq',tbl_name);
-            EXECUTE format('select count(*)!=0 
-                        from INFORMATION_SCHEMA.COLUMNS 
-                        where table_name = ''%s''
-                        and column_name = ''uid''',tbl_name)
-            INTO has_uid_col;            
-            IF (has_uid_col=True)
-            THEN
+            _seq = FORMAT('%I_uid_seq',tbl_name);
+            EXECUTE FORMAT('SELECT count(*)!=0 
+                            FROM INFORMATION_SCHEMA.COLUMNS 
+                            WHERE table_name = ''%s''
+                            AND column_name = ''uid''',tbl_name)
+                INTO has_uid_col;            
+            
+            IF (has_uid_col=True) THEN
                 --RAISE NOTICE 'HAS UID COL';
-                execute format('alter table %I 
-                                    alter column uid type integer,
-                                    alter column uid set not null,
-                                    alter column uid set default z_next_free(
-                                        ''%I'',
-                                        ''uid'',
-                                        ''%I''), 
+                EXECUTE format('ALTER TABLE %I 
+                                    ALTER COLUMN uid TYPE INTEGER,
+                                    ALTER COLUMN uid SET NOT NULL,
+                                    ALTER COLUMN uid SET DEFAULT z_next_free(
+                                        ''%s''::text,
+                                        ''uid''::text,
+                                        ''%s''::text), 
                                     ADD PRIMARY KEY (uid);',tbl_name,tbl_name,_seq);
             ELSE
                 --RAISE NOTICE 'NOT HAVE UID COL';
-                _seq = format('%I_uid_seq',tbl_name);
-                execute format('alter table %I add column uid integer primary key
-                                default z_next_free(''%I'',''uid'',''%I'')',
+                _seq = FORMAT('%I_uid_seq',tbl_name);
+                EXECUTE FORMAT('ALTER TABLE %I ADD COLUMN uid INTEGER PRIMARY KEY
+                                DEFAULT z_next_free(''%s'',''uid'',''%s'');',
                                 tbl_name,tbl_name,_seq);
             END IF;
             
@@ -66,7 +65,7 @@ BEGIN
     
 END;
 $BODY$
-  LANGUAGE plpgsql;
+    LANGUAGE plpgsql;
 
 DROP EVENT TRIGGER if exists missing_primary_key_trigger;
 CREATE EVENT TRIGGER missing_primary_key_trigger

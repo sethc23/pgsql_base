@@ -38,18 +38,29 @@ class pgSQL_Functions:
         def __init__(self,_parent):
             self                            =   _parent.T.To_Sub_Classes(self,_parent)
 
-        def make_column_primary_serial_key(self,table_name,uid_col='uid',is_new_col=True):
+        def make_column_primary_serial_key(self,table_name,uid_col='uid'):
             """
             Usage: make_column_primary_serial_key('table_name','uid_col',is_new_col=True)
             """
-            if not self.F.functions_exists('z_make_column_primary_serial_key'):
-                self.F.functions_run_make_column_primary_serial_key()
+            _info                           =   self.F.tables_get_info(table_name)
+            is_new_col                      =   False if _info.iloc[:,0].astype(str).tolist().count(uid_col) else True
+            if is_new_col:
+                is_primary_key,has_default  =   False,False
+            else:
+                is_primary_key              =   True if _info[_info.column_name==uid_col].ix[:,'is_primary_key'].tolist()[0] else False
+                has_default                 =   True if _info[_info.column_name==uid_col].ix[:,'column_default'].tolist()[0] else False
+                
+
             T                               =   {'tbl'                  :   table_name,
                                                  'uid_col'              :   uid_col,
-                                                 'is_new_col'           :   is_new_col}
+                                                 'is_new_col'           :   is_new_col,
+                                                 'is_primary_key'       :   is_primary_key,
+                                                 'has_default'          :   has_default}
             cmd                             =   """select z_make_column_primary_serial_key( '%(tbl)s',
                                                                                         '%(uid_col)s',
-                                                                                         %(is_new_col)s );
+                                                                                         %(is_new_col)s,
+                                                                                         %(is_primary_key)s,
+                                                                                         %(has_default)s);
                                                 """ % T
             self.T.to_sql(                      cmd)
 
@@ -83,7 +94,7 @@ class pgSQL_Functions:
             self                            =   _parent.T.To_Sub_Classes(self,_parent)
 
         def __show_auto_groups(self):
-            (_out,_err) = self.T.sub_popen('ls -p %s/sql_functions/ | grep "/"' % self.T.pwd,
+            (_out,_err) = self.T.sub_popen('ls -p %s/sql_functions/ | grep "/"' % self.T.pg_classes_pwd,
                    stdout=self.T.sub_PIPE,
                    shell=True).communicate()
 
@@ -92,10 +103,10 @@ class pgSQL_Functions:
 
         def batch_groups(self,grps=['admin','json','strings']):
             cmds = []
-            c_tmp = 'psql -d linkedin -c "%s ' + self.T.pwd + '/sql_functions/%s/%s;"'
+            c_tmp = 'psql -d linkedin -c "%s ' + self.T.pg_classes_pwd + '/sql_functions/%s/%s;"'
             
             for d in grps:
-                for f in sorted(self.T.os.listdir('%s/sql_functions/%s' % (self.T.pwd,d))):
+                for f in sorted(self.T.os.listdir('%s/sql_functions/%s' % (self.T.pg_classes_pwd,d))):
                     if f.count('.sql'):
                         cmds.append( c_tmp % ('\\\\\\\\i',d,f) )
             cmds = '\n'.join(cmds)
@@ -376,10 +387,32 @@ class pgSQL_Tables:
 
     def get_info(self,table_name):
         qry                                 =   """
-                                                SELECT column_name, data_type, character_maximum_length
-                                                FROM INFORMATION_SCHEMA.COLUMNS
-                                                WHERE table_name = '%s';
-                                                """ % table_name
+                                                WITH primary_key_info AS (
+                                                    SELECT a.attname, format_type(a.atttypid, a.atttypmod) AS data_type_pk
+                                                    FROM   pg_index i
+                                                    JOIN   pg_attribute a ON a.attrelid = i.indrelid
+                                                                         AND a.attnum = ANY(i.indkey)
+                                                    WHERE  i.indrelid = '%s'::regclass
+                                                    AND    i.indisprimary
+                                                    ),
+                                                gen_info AS (
+                                                    SELECT 
+                                                        column_name, data_type, character_maximum_length,
+                                                        column_default,is_nullable,data_type_pk
+                                                    FROM INFORMATION_SCHEMA.COLUMNS
+                                                    LEFT JOIN primary_key_info pk ON pk.attname = column_name
+                                                    WHERE table_name = '%s'
+                                                    )    
+                                                SELECT 
+                                                    column_name, data_type, character_maximum_length,
+                                                    column_default,
+                                                        CASE
+                                                        WHEN data_type_pk is NULL THEN NULL
+                                                        ELSE true END is_primary_key,
+                                                    is_nullable
+                                                FROM gen_info;
+
+                                                """ % (table_name,table_name)
         return                                  self.T.pd.read_sql(qry,self.T.eng)
 
     def has_col(self,table_name,column_name):
@@ -417,10 +450,11 @@ class pgSQL_Tables:
             tbl_cols = ',\n'.join([ '%s %s' % (k,v) for k,v in tbl_dict.iteritems()])
             qry = "CREATE TABLE IF NOT EXISTS %s ( %s );" % (tbl_name,tbl_cols)
             if drop_if_exists:
-                qry = "DROP TABLE IF EXISTS %s; " + qry
+                qry = "DROP TABLE IF EXISTS %s CASCADE; " % tbl_name + qry
             self.T.to_sql(                  qry)
-            if not self.F.functions_check_primary_key(tbl_name):
-                self.F.functions_run_make_column_primary_serial_key(tbl_name,'uid')
+            self.F.functions_run_make_column_primary_serial_key(tbl_name)
+            # if not self.F.functions_check_primary_key(tbl_name):
+            #     self.F.functions_run_make_column_primary_serial_key(tbl_name,'uid')
 
 class pgSQL_Types:
 
@@ -465,13 +499,15 @@ class pgSQL_Types:
             self.T.to_sql(                  qry)
 
 class pgSQL:
-    """
-
-    pgSQL(db_settings=[DB_NAME, DB_USER, DB_PW, DB_HOST, DB_PORT])
-
-    """
+    
 
     def __init__(self,db_settings=[]):
+        """
+
+            pgSQL(db_settings=[DB_NAME, DB_USER, DB_PW, DB_HOST, DB_PORT])
+
+        """
+
         def download_file(url,save_path):
             import os
             _dir = save_path[:save_path.rfind('/')]
@@ -542,6 +578,7 @@ class pgSQL:
         from re                                 import findall          as re_findall
         from re                                 import sub              as re_sub           # re_sub('patt','repl','str','cnt')
         from re                                 import search           as re_search        # re_search('patt','str')
+        import json
         from subprocess                         import Popen            as sub_popen
         from subprocess                         import PIPE             as sub_PIPE
         from traceback                          import format_exc       as tb_format_exc
@@ -556,7 +593,7 @@ class pgSQL:
         else:
             DB_NAME,DB_USER,DB_PW,DB_HOST,DB_PORT = db_settings
 
-        from py_classes_link                    import To_Sub_Classes,To_Class,To_Class_Dict
+        from py_classes                         import To_Sub_Classes,To_Class,To_Class_Dict
         import                                  pandas                  as pd
         pd.set_option(                          'expand_frame_repr', False)
         pd.set_option(                          'display.max_columns', None)
@@ -567,25 +604,44 @@ class pgSQL:
         np                                  =   pd.np
         np.set_printoptions(                    linewidth=1500,threshold=np.nan)
         # import                                  geopandas               as gd
-        from sqlalchemy                         import create_engine
         import logging
         logger = logging.getLogger(                      'sqlalchemy.dialects.postgresql')
         logger.setLevel(logging.INFO)
+        try:
+            from sqlalchemy                         import create_engine
+            from psycopg2                           import connect          as pg_connect
+            eng                                 =   create_engine(r'postgresql://%s:%s@%s:%s/%s'
+                                                              %(DB_USER,DB_PW,DB_HOST,DB_PORT,DB_NAME),
+                                                              encoding='utf-8',
+                                                              echo=False)
+            conn                                =   pg_connect("dbname='%s' " % DB_NAME +
+                                                               "user='%s' " % DB_USER +
+                                                               "host='%s' password='%s' port=%s"
+                                                               % (DB_HOST,DB_PW,DB_PORT));
+            cur                                 =   conn.cursor()
+        except:
+            from getpass import getpass
+            pw = getpass('Root password (to create DB via CL): ')
+            p = sub_popen("""echo '%s' | sudo -S prompt='' su postgres -c "psql --cluster 9.4/main -c 'create database %s;'" """ % (pw,DB_NAME),
+                   stdout=sub_PIPE,
+                   shell=True)
+            (_out, _err) = p.communicate()
+            assert _err is None
 
-        eng                                 =   create_engine(r'postgresql://%s:%s@%s:%s/%s'
-                                                          %(DB_USER,DB_PW,DB_HOST,DB_PORT,DB_NAME),
-                                                          encoding='utf-8',
-                                                          echo=False)
-        from psycopg2                           import connect          as pg_connect
-        conn                                =   pg_connect("dbname='%s' " % DB_NAME +
-                                                           "user='%s' " % DB_USER +
-                                                           "host='%s' password='%s' port=%s"
-                                                           % (DB_HOST,DB_PW,DB_PORT));
-        cur                                 =   conn.cursor()
+            eng                                 =   create_engine(r'postgresql://%s:%s@%s:%s/%s'
+                                                              %(DB_USER,DB_PW,DB_HOST,DB_PORT,DB_NAME),
+                                                              encoding='utf-8',
+                                                              echo=False)
+            conn                                =   pg_connect("dbname='%s' " % DB_NAME +
+                                                               "user='%s' " % DB_USER +
+                                                               "host='%s' password='%s' port=%s"
+                                                               % (DB_HOST,DB_PW,DB_PORT));
+            cur                                 =   conn.cursor()
+
 
         import inspect, os
         D                                   =   {'guid'                 :   str(get_guid().hex)[:7],
-                                                 'pwd'                  :   os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))),
+                                                 'pg_classes_pwd'                  :   os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))),
                                                 }
         D.update(                               {'tmp_tbl'              :   'tmp_'+D['guid'],
                                                  'current_filepath'     :   inspect.getfile(inspect.currentframe())})
@@ -605,17 +661,20 @@ class pgSQL:
 
     def __initial_check__(self):
         # at minimum, confirm that geometry is enabled
-        self.F.functions_run_confirm_extensions(verbose=True)
+        self.F.functions_run_confirm_extensions(verbose=False)
+        self.F.functions_create_batch_groups(grps=['admin'])
 
         if not self.F.triggers_exists_event_trigger('missing_primary_key_trigger'):
-            idx_trig = raw_input('add trigger to automatically create column "uid" as index col if table created without index column? (y/n)\t')
-            if idx_trig=='y':
-                self.F.triggers_create_z_auto_add_primary_key()
+            print 'missing missing_primary_key_trigger'
+            # idx_trig = raw_input('add trigger to automatically create column "uid" as index col if table created without index column? (y/n)\t')
+            # if idx_trig=='y':
+            #     self.F.triggers_create_z_auto_add_primary_key()
 
         if not self.F.triggers_exists_event_trigger('missing_last_updated_field'):
-            modified_trig = raw_input('add trigger to automatically create column "last_updated" for all new tables and update col/row when row modified? (y/n)\t')
-            if modified_trig=='y':
-                self.F.triggers_create_z_auto_add_last_updated_field()
+            print 'missing missing_last_updated_field'
+            # modified_trig = raw_input('add trigger to automatically create column "last_updated" for all new tables and update col/row when row modified? (y/n)\t')
+            # if modified_trig=='y':
+            #     self.F.triggers_create_z_auto_add_last_updated_field()
                 #### self.F.triggers_create_z_auto_update_timestamp()
 
     def __temp_options__(self):

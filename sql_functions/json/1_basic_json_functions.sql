@@ -1,5 +1,5 @@
 DROP FUNCTION IF EXISTS json_object_set_keys(json,text[],anyarray);
-CREATE OR REPLACE FUNCTION "json_object_set_keys"(
+CREATE OR REPLACE FUNCTION json_object_set_keys(
   "json"          json,
   "keys_to_set"   TEXT[],
   "values_to_set" anyarray
@@ -25,7 +25,7 @@ FROM (SELECT *
      USING ("index")) AS "fields"
 $function$;
 
-CREATE OR REPLACE FUNCTION public.json_append(data json, insert_data json)
+CREATE OR REPLACE FUNCTION json_append(data json, insert_data json)
 RETURNS json
 IMMUTABLE
 LANGUAGE sql
@@ -38,7 +38,7 @@ AS $$
     ) t;
 $$;
  
-CREATE OR REPLACE FUNCTION public.json_delete(data json, keys text[])
+CREATE OR REPLACE FUNCTION json_delete(data json, keys text[])
 RETURNS json
 IMMUTABLE
 LANGUAGE sql
@@ -50,7 +50,7 @@ AS $$
     ) t;
 $$;
  
-CREATE OR REPLACE FUNCTION public.json_merge(data json, merge_data json)
+CREATE OR REPLACE FUNCTION json_merge(data json, merge_data json)
 RETURNS json
 IMMUTABLE
 LANGUAGE sql
@@ -68,7 +68,7 @@ AS $$
     ) t;
 $$;
  
-CREATE OR REPLACE FUNCTION public.json_update(data json, update_data json)
+CREATE OR REPLACE FUNCTION json_update(data json, update_data json)
 RETURNS json
 IMMUTABLE
 LANGUAGE sql
@@ -88,7 +88,7 @@ AS $$
 ) t;
 $$;
 
-CREATE OR REPLACE FUNCTION public.json_lint(from_json json, ntab integer DEFAULT 0)
+CREATE OR REPLACE FUNCTION json_lint(from_json json, ntab integer DEFAULT 0)
 RETURNS json
 LANGUAGE sql
 IMMUTABLE STRICT
@@ -107,7 +107,7 @@ SELECT (CASE substring(from_json::text FROM E'(?m)^[\s]*(.)') /* Get first non-w
 END)::json
 $$;
 
-CREATE OR REPLACE FUNCTION public.json_unlint(from_json json)
+CREATE OR REPLACE FUNCTION json_unlint(from_json json)
 RETURNS json
 LANGUAGE sql
 IMMUTABLE STRICT
