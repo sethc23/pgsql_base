@@ -1,4 +1,4 @@
-DROP FUNCTION if exists z_auto_add_primary_key() CASCADE;
+-- DROP FUNCTION if exists z_auto_add_primary_key() CASCADE;
 
 CREATE OR REPLACE FUNCTION z_auto_add_primary_key()
     RETURNS event_trigger AS
@@ -67,7 +67,7 @@ END;
 $BODY$
     LANGUAGE plpgsql;
 
-DROP EVENT TRIGGER if exists missing_primary_key_trigger;
+-- DROP EVENT TRIGGER if exists missing_primary_key_trigger;
 CREATE EVENT TRIGGER missing_primary_key_trigger
 ON ddl_command_end
 WHEN TAG IN ('CREATE TABLE','CREATE TABLE AS')

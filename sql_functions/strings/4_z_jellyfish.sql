@@ -2,8 +2,8 @@
 CREATE EXTENSION IF NOT EXISTS plpythonu;
 
 -- Type: public.string_dist_results
-DROP TYPE IF EXISTS string_dist_results CASCADE;
-CREATE TYPE string_dist_results AS
+-- DROP TYPE IF EXISTS z_str_dist_results CASCADE;
+CREATE TYPE z_str_dist_results AS
    (idx integer,
     orig_str text,
     jaro double precision,
@@ -14,17 +14,17 @@ CREATE TYPE string_dist_results AS
     rating_codex text);
 
 
-DROP FUNCTION IF EXISTS     z_jellyfish(            text,
-                                                    text,
-                                                    boolean,
-                                                    boolean,
-                                                    boolean,
-                                                    boolean,
-                                                    boolean,
-                                                    boolean,
-                                                    boolean) CASCADE;
+-- DROP FUNCTION IF EXISTS     z_str_jellyfish(            text,
+--                                                     text,
+--                                                     boolean,
+--                                                     boolean,
+--                                                     boolean,
+--                                                     boolean,
+--                                                     boolean,
+--                                                     boolean,
+--                                                     boolean) CASCADE;
 
-CREATE OR REPLACE FUNCTION  z_jellyfish(            from_str_idx_tuples_qry     text,                  -- having header: | from_tuples    |      
+CREATE OR REPLACE FUNCTION  z_str_jellyfish(            from_str_idx_tuples_qry     text,                  -- having header: | from_tuples    |      
                                                     against_str_idx_tuples_qry  text,                  -- having header: | against_tuples |
                                                     all_results                 boolean default false,
                                                     best_result                 boolean default true,
@@ -34,13 +34,13 @@ CREATE OR REPLACE FUNCTION  z_jellyfish(            from_str_idx_tuples_qry     
                                                     rating_codex                boolean default true,
                                                     usps_repl_first             boolean default true)
 
-RETURNS SETOF string_dist_results AS $$
+RETURNS SETOF z_str_dist_results AS $$
 
     from jellyfish              import cjellyfish as J
     from traceback              import format_exc       as tb_format_exc
     from sys                    import exc_info         as sys_exc_info
 
-    class string_dist_results:
+    class z_str_dist_results:
 
         def __init__(self,upd=None):
             if upd:
@@ -63,7 +63,7 @@ RETURNS SETOF string_dist_results AS $$
         plpy.log(               p)
         res                 =   plpy.execute(p % T)
         if len(res)==0:
-            plpy.log(           "string_dist_results: NO DATA AVAILABLE FROM ##(tbl)s IN %(tbl)s" % T)
+            plpy.log(           "z_str_dist_results: NO DATA AVAILABLE FROM ##(tbl)s IN %(tbl)s" % T)
             return
         else:
             plpy.log(           res)
@@ -110,7 +110,7 @@ RETURNS SETOF string_dist_results AS $$
 $$ LANGUAGE plpythonu;
 
 
-COMMENT ON FUNCTION z_jellyfish( text,text,boolean,boolean,boolean,boolean,boolean,boolean,boolean ) IS E'
+COMMENT ON FUNCTION z_str_jellyfish( text,text,boolean,boolean,boolean,boolean,boolean,boolean,boolean ) IS E'
 
     compare_col is concat_ws('' '',...)
 

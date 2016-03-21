@@ -88,6 +88,27 @@ class pgSQL_Functions:
             """ % {'tbl':table_name,'uid_col':uid_col,'sort_by':sort_by}
             self.T.to_sql(qry)
 
+        def get_all_functions(self):
+            q = """
+                SELECT n.nspname as "Schema",
+                    p.proname as "f_name",
+                    pg_catalog.pg_get_function_result(p.oid) as "result_type",
+                    pg_catalog.pg_get_function_arguments(p.oid) as "arg_types",
+                    CASE
+                        WHEN p.proisagg THEN 'agg'
+                        WHEN p.proiswindow THEN 'window'
+                        WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype THEN 'trigger'
+                        ELSE 'normal'
+                    END as "f_type"
+                FROM pg_catalog.pg_proc p
+                LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+                WHERE pg_catalog.pg_function_is_visible(p.oid)
+                    AND n.nspname <> 'pg_catalog'
+                    AND n.nspname <> 'information_schema'
+                ORDER BY 1, 2, 4;
+                """
+            return                              self.T.pd.read_sql(qry,self.T.eng)
+
     class Create:
 
         def __init__(self,_parent):
@@ -101,14 +122,19 @@ class pgSQL_Functions:
             assert _err is None
             print _out
 
-        def batch_groups(self,grps=['admin','json','strings']):
+        def batch_groups(self,sub_dir='sql_functions',grps=['admin','json','strings'],files=['all']):
             cmds = []
             c_tmp = 'psql -d linkedin -c "%s ' + self.T.pg_classes_pwd + '/sql_functions/%s/%s;"'
             
+            files = files if type(files)==list else list(files)
             for d in grps:
-                for f in sorted(self.T.os.listdir('%s/sql_functions/%s' % (self.T.pg_classes_pwd,d))):
+                for f in sorted(self.T.os.listdir('%s/%s/%s' % (self.T.pg_classes_pwd,sub_dir,d))):
+                    print d,f
                     if f.count('.sql'):
-                        cmds.append( c_tmp % ('\\\\\\\\i',d,f) )
+                        if files==['all']:
+                            cmds.append( c_tmp % ('\\\\\\\\i',d,f) )
+                        elif files.count(f):
+                            cmds.append( c_tmp % ('\\\\\\\\i',d,f) )
             cmds = '\n'.join(cmds)
             qry = """
                 DO E'#!/bin/sh
@@ -119,6 +145,88 @@ class pgSQL_Functions:
                     ' LANGUAGE plsh;
                 """ % cmds
             self.T.to_sql(                      qry)
+
+        def z_next_free(self):
+            self.PG.F.functions_destroy_z_next_free()
+            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+                                                    grps=['admin'],
+                                                    files=['1_z_next_free.sql'])
+        def z_get_seq_value(self):
+            self.PG.F.functions_destroy_z_get_seq_value()
+            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+                                                    grps=['admin'],
+                                                    files=['2_z_get_seq_value.sql'])
+        def z_array_sort(self):
+            self.PG.F.functions_destroy_z_array_sort()
+            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+                                                    grps=['admin'],
+                                                    files=['5_z_array_sort.sql'])
+        def z_make_column_primary_serial_key(self):
+            self.PG.F.functions_destroy_z_make_column_primary_serial_key()
+            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+                                                    grps=['admin'],
+                                                    files=['6_z_make_column_primary_serial_key.sql'])
+
+        def json_functions(self):
+            self.PG.F.functions_destroy_json_functions()
+            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+                                                    grps=['json'],
+                                                    files=['all'])
+        def string_functions(self):
+            self.PG.F.functions_destroy_string_functions()
+            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+                                                    grps=['string'],
+                                                    files=['all'])
+
+    class Destroy:
+        def __init__(self,_parent):
+            self                            =   _parent.T.To_Sub_Classes(self,_parent)
+
+        def z_next_free(self):
+            c                               =   """
+                DROP FUNCTION IF EXISTS z_next_free(text, text, text) CASCADE;
+                                            """
+            self.T.to_sql(                      qry)
+
+        def z_get_seq_value(self):
+            c                               =   """
+                DROP FUNCTION IF EXISTS z_get_seq_value(text) CASCADE;
+                                            """
+            self.T.to_sql(                      qry)
+
+        def z_array_sort(self):
+            c                               =   """
+                DROP FUNCTION IF EXISTS z_array_sort(anyarray) CASCADE;
+                                            """
+            self.T.to_sql(                      qry)
+
+        def z_make_column_primary_serial_key(self):
+            c                               =   """
+                DROP FUNCTION IF EXISTS 
+                    z_make_column_primary_serial_key(text,text,boolean,boolean,boolean) CASCADE;
+                                            """
+            self.T.to_sql(                      qry)
+
+        def json_functions(self):
+            q,q_temp = [],'DROP FUNCTION IF EXISTS %s(%s) CASCADE;'
+            df = self.PG.F.functions_run_get_all_functions()
+            for i,r in df.iterrows():
+                if str(r.f_name).find('json_')==0:
+                    arg_types = str([str(it.split()[1]) for it in r.arg_types.split(',')]).strip('[]').replace("'",'')
+                    q.append(q_temp % (r.f_name,arg_types))
+            qry = ' '.join(q)
+            self.T.to_sql(                      qry)
+
+        def string_functions(self):
+            q,q_temp = [],'DROP FUNCTION IF EXISTS %s(%s) CASCADE;'
+            df = self.PG.F.functions_run_get_all_functions()
+            for i,r in df.iterrows():
+                if str(r.f_name).find('z_str_')==0:
+                    arg_types = str([str(it.split()[1]) for it in r.arg_types.split(',')]).strip('[]').replace("'",'')
+                    q.append(q_temp % (r.f_name,arg_types))
+            qry = ' '.join(q)
+            self.T.to_sql(                      qry)
+
 
 class pgSQL_Triggers:
 
@@ -153,155 +261,17 @@ class pgSQL_Triggers:
             self                            =   _parent.T.To_Sub_Classes(self,_parent)
 
         def z_auto_add_primary_key(self):
+            self.PG.F.triggers_destroy_z_auto_add_primary_key()
+            
             self.F.functions_create_z_next_free()
-            c                           =   """
-                DROP FUNCTION if exists z_auto_add_primary_key() CASCADE;
-
-                CREATE OR REPLACE FUNCTION z_auto_add_primary_key()
-                    RETURNS event_trigger AS
-                $BODY$
-                DECLARE
-                    has_index boolean;
-                    tbl_name text;
-                    primary_key_col text;
-                    missing_primary_key boolean;
-                    has_uid_col boolean;
-                    _seq text;
-                BEGIN
-                    select relhasindex,relname into has_index,tbl_name
-                        from pg_class
-                        where relnamespace=2200
-                        and relkind='r'
-                        order by oid desc limit 1;
-                    IF (
-                        pg_trigger_depth()=0
-                        and has_index=False )
-                    THEN
-                        --RAISE NOTICE 'NOT HAVE INDEX';
-                        EXECUTE format('SELECT a.attname
-                                        FROM   pg_index i
-                                        JOIN   pg_attribute a ON a.attrelid = i.indrelid
-                                                             AND a.attnum = ANY(i.indkey)
-                                        WHERE  i.indrelid = ''%s''::regclass
-                                        AND    i.indisprimary',tbl_name)
-                        INTO primary_key_col;
-
-                        missing_primary_key = (select primary_key_col is null);
-
-                        IF missing_primary_key=True
-                        THEN
-                            --RAISE NOTICE 'IS MISSING PRIMARY KEY';
-                            _seq = format('%I_uid_seq',tbl_name);
-                            EXECUTE format('select count(*)!=0
-                                        from INFORMATION_SCHEMA.COLUMNS
-                                        where table_name = ''%s''
-                                        and column_name = ''uid''',tbl_name)
-                            INTO has_uid_col;
-                            IF (has_uid_col=True)
-                            THEN
-                                --RAISE NOTICE 'HAS UID COL';
-                                execute format('alter table %I
-                                                    alter column uid type integer,
-                                                    alter column uid set not null,
-                                                    alter column uid set default z_next_free(
-                                                        ''%I''::text,
-                                                        ''uid''::text,
-                                                        ''%I''::text),
-                                                    ADD PRIMARY KEY (uid)',tbl_name,tbl_name,'_seq');
-                            ELSE
-                                --RAISE NOTICE 'NOT HAVE UID COL';
-                                _seq = format('%I_uid_seq',tbl_name);
-                                execute format('alter table %I add column uid integer primary key
-                                                default z_next_free(
-                                                        ''%I''::text,
-                                                        ''uid''::text,
-                                                        ''%I''::text)',tbl_name,tbl_name,'_seq');
-                            END IF;
-
-                        END IF;
-
-                    END IF;
-
-                END;
-                $BODY$
-                    LANGUAGE plpgsql;
-
-                DROP EVENT TRIGGER if exists missing_primary_key_trigger;
-                CREATE EVENT TRIGGER missing_primary_key_trigger
-                ON ddl_command_end
-                WHEN TAG IN ('CREATE TABLE','CREATE TABLE AS')
-                EXECUTE PROCEDURE z_auto_add_primary_key();
-                                                """
-            self.T.to_sql(                      c)
-            print 'Added: f(x) z_auto_add_primary_key'
+            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+                                                    grps=['admin'],
+                                                    files=['3_z_auto_add_primary_key.sql'])
         def z_auto_add_last_updated_field(self):
-            c                           =   """
-                DROP FUNCTION if exists z_auto_add_last_updated_field() cascade;
-
-                CREATE OR REPLACE FUNCTION z_auto_add_last_updated_field()
-                    RETURNS event_trigger AS
-                $BODY$
-                DECLARE
-                    last_table TEXT;
-                    has_last_updated BOOLEAN;
-                BEGIN
-                    last_table := ( SELECT relname FROM pg_class
-                                    WHERE relnamespace=2200
-                                    AND relkind='r'
-                                    ORDER BY oid DESC LIMIT 1);
-
-                    EXECUTE 'SELECT EXISTS ('
-                        || ' SELECT 1'
-                        || ' FROM information_schema.columns'
-                        || ' WHERE table_name='''
-                        || quote_ident(last_table)
-                        || ''' AND column_name=''last_updated'''
-                        || ' )'
-                        INTO has_last_updated;
-
-                    -- RAISE EXCEPTION 'has_last_updated is %', has_last_updated;
-
-
-                    IF (
-                        pg_trigger_depth()=0
-                        AND has_last_updated=False
-                        AND position('tmp_' in last_table)=0  --exclude public.tmp_*
-                        )
-                    THEN
-                        EXECUTE FORMAT('ALTER TABLE %I DROP COLUMN IF EXISTS last_updated',last_table);
-                        EXECUTE FORMAT('ALTER TABLE %I ADD COLUMN last_updated timestamp WITH TIME ZONE',last_table);
-                        EXECUTE FORMAT('DROP FUNCTION IF EXISTS z_auto_update_timestamp_on_%s_in_last_updated() CASCADE',last_table);
-                        EXECUTE FORMAT('DROP TRIGGER IF EXISTS update_timestamp_on_%s_in_last_updated ON %s',last_table,last_table);
-
-                        EXECUTE FORMAT('CREATE OR REPLACE FUNCTION z_auto_update_timestamp_on_%s_in_last_updated()'
-                                        || ' RETURNS TRIGGER AS $$'
-                                        || ' BEGIN'
-                                        || '     NEW.last_updated := now();'
-                                        || '     RETURN NEW;'
-                                        || ' END;'
-                                        || ' $$ language ''plpgsql'';'
-                                        || '',last_table);
-
-                        EXECUTE FORMAT('CREATE TRIGGER update_timestamp_on_%s_in_last_updated'
-                                        || ' BEFORE UPDATE OR INSERT ON %I'
-                                        || ' FOR EACH ROW'
-                                        || ' EXECUTE PROCEDURE z_auto_update_timestamp_on_%s_in_last_updated();'
-                                        || '',last_table,last_table,last_table);
-
-                    END IF;
-
-                END;
-                $BODY$
-                    LANGUAGE plpgsql;
-
-                DROP EVENT TRIGGER if exists missing_last_updated_field;
-                CREATE EVENT TRIGGER missing_last_updated_field
-                ON ddl_command_end
-                WHEN TAG IN ('CREATE TABLE','CREATE TABLE AS')
-                EXECUTE PROCEDURE z_auto_add_last_updated_field();
-                                            """
-            self.T.conn.set_isolation_level(0)
-            self.T.cur.execute(c)
+            self.PG.F.triggers_destroy_z_auto_add_last_updated_field()
+            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+                                                    grps=['admin'],
+                                                    files=['4_z_auto_add_last_updated_field.sql'])
         def z_auto_update_timestamp(self,tbl,col):
             a="""
                 DROP FUNCTION if exists z_auto_update_timestamp_on_%(tbl)s_in_%(col)s() cascade;
@@ -332,19 +302,15 @@ class pgSQL_Triggers:
 
         def z_auto_add_primary_key(self):
             c                           =   """
-            DROP FUNCTION if exists
-                z_auto_add_primary_key() cascade;
-
-            DROP EVENT TRIGGER if exists missing_primary_key_trigger cascade;
+                DROP FUNCTION IF EXISTS z_auto_add_primary_key() CASCADE;
+                DROP EVENT TRIGGER IF EXISTS missing_primary_key_trigger CASCADE;
                                             """
             self.T.conn.set_isolation_level(0)
             self.T.cur.execute(c)
         def z_auto_add_last_updated_field(self):
             c                               =   """
-            DROP FUNCTION if exists
-                z_auto_add_last_updated_field() cascade;
-
-            DROP EVENT TRIGGER if exists missing_last_updated_field;
+                DROP FUNCTION IF EXISTS z_auto_add_last_updated_field() CASCADE;
+                DROP EVENT TRIGGER IF EXISTS missing_last_updated_field CASCADE;
                                             """
             self.T.conn.set_isolation_level(0)
             self.T.cur.execute(c)
@@ -600,6 +566,17 @@ class pgSQL:
             plt.grid()
             plt.draw()
 
+        def _load_connectors():
+            eng                             =   create_engine(r'postgresql://%(DB_USER)s:%(DB_PW)s@%(DB_HOST)s:%(DB_PORT)s/%(DB_NAME)s'
+                                                              % T,
+                                                              encoding='utf-8',
+                                                              echo=False)
+            conn                            =   pg_connect("dbname='%(DB_NAME)s' host='%(DB_HOST)s' port=%(DB_PORT)s \
+                                                           user='%(DB_USER)s' password='%(DB_PW)s' "
+                                                           % T);
+            cur                             =   conn.cursor()
+            return eng,conn,cur
+
         import                                  datetime                as dt
         from dateutil                           import parser           as DU               # e.g., DU.parse('some date as str') --> obj(datetime.datetime)
         from time                               import sleep
@@ -626,7 +603,10 @@ class pgSQL:
         db_vars = ['DB_NAME','DB_HOST','DB_PORT','DB_USER','DB_PW']
         db_vars = [it for it in db_vars if not T._has_key(it)]
 
-        if locals().keys().count('db_settings'):
+        if not db_vars:
+            pass
+
+        elif locals().keys().count('db_settings'):
             DB_NAME,DB_USER,DB_PW,DB_HOST,DB_PORT = db_settings
             for it in db_vars:
                 eval('T["%s"] = %s' % (it,it))
@@ -652,14 +632,7 @@ class pgSQL:
         from sqlalchemy                         import create_engine
         from psycopg2                           import connect          as pg_connect
         try:
-            eng                             =   create_engine(r'postgresql://%(DB_USER)s:%(DB_PW)s@%(DB_HOST)s:%(DB_PORT)s/%(DB_NAME)s'
-                                                              % T,
-                                                              encoding='utf-8',
-                                                              echo=False)
-            conn                            =   pg_connect("dbname='%(DB_NAME)s' host='%(DB_HOST)s' port=%(DB_PORT)s \
-                                                           user='%(DB_USER)s' password='%(DB_PW)s' "
-                                                           % T);
-            cur                             =   conn.cursor()
+            eng,conn,cur                    =   _load_connectors()
 
         except:
             from getpass import getpass
@@ -672,25 +645,15 @@ class pgSQL:
                           shell=True)
             (_out, _err) = p.communicate()
             assert _err is None
-
-            eng                             =   create_engine(r'postgresql://%(DB_USER)s:%(DB_PW)s@%(DB_HOST)s:%(DB_PORT)s/%(DB_NAME)s'
-                                                              % T,
-                                                              encoding='utf-8',
-                                                              echo=False)
-            conn                            =   pg_connect("dbname='%(DB_NAME)s' host='%(DB_HOST)s' port=%(DB_PORT)s \
-                                                           user='%(DB_USER)s' password='%(DB_PW)s' "
-                                                           % T);
-            cur                             =   conn.cursor()
+            eng,conn,cur                    =   _load_connectors()
 
 
         import inspect, os
         D                                   =   {'guid'                 :   str(get_guid().hex)[:7],
-                                                 'pg_classes_pwd'                  :   os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))),
+                                                 'pg_classes_pwd'       :   os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))),
                                                 }
         D.update(                               {'tmp_tbl'              :   'tmp_'+D['guid'],
                                                  'current_filepath'     :   inspect.getfile(inspect.currentframe())})
-
-
 
         self.T                              =   To_Class_Dict(  self,
                                                                 dict_list=[T.__dict__,D,locals()],
@@ -700,8 +663,10 @@ class pgSQL:
         self.Triggers                       =   pgSQL_Triggers(self)
         self.Tables                         =   pgSQL_Tables(self)
         self.Types                          =   pgSQL_Types(self)
-        self.__initial_check__(                 )
-        self.__temp_options__(                  )
+        if hasattr(T,'initial_check') and T.initial_check:
+            self.__initial_check__(                 )
+        if hasattr(T,'temp_options') and T.temp_options:
+            self.__temp_options__(                  )
 
     def __initial_check__(self):
         # at minimum, confirm that geometry is enabled

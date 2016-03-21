@@ -1,7 +1,6 @@
 
 
-DROP FUNCTION IF EXISTS z_make_column_primary_serial_key(text,text,boolean);
-DROP FUNCTION IF EXISTS z_make_column_primary_serial_key(text,text,boolean,boolean,boolean);
+-- DROP FUNCTION IF EXISTS z_make_column_primary_serial_key(text,text,boolean,boolean,boolean);
 CREATE OR REPLACE FUNCTION z_make_column_primary_serial_key(
     IN tbl text,
     IN uid_col text,

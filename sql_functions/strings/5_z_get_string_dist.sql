@@ -3,8 +3,8 @@ CREATE EXTENSION IF NOT EXISTS plpythonu;
 
 -- Type: public.string_dist_results
 
-DROP TYPE public.string_dist_results CASCADE;
-CREATE TYPE public.string_dist_results AS
+-- DROP TYPE z_str_dist_results CASCADE;
+CREATE TYPE z_str_dist_results AS
    (idx integer,
     orig_str text,
     jaro double precision,
@@ -16,17 +16,17 @@ CREATE TYPE public.string_dist_results AS
 
 
 
-DROP FUNCTION IF EXISTS     z_get_string_dist(      integer[],
-                                                    text,
-                                                    text,
-                                                    text[],
-                                                    boolean,
-                                                    boolean,
-                                                    boolean,
-                                                    boolean,
-                                                    boolean) CASCADE;
+-- DROP FUNCTION IF EXISTS     z_str_get_dist(      integer[],
+--                                                     text,
+--                                                     text,
+--                                                     text[],
+--                                                     boolean,
+--                                                     boolean,
+--                                                     boolean,
+--                                                     boolean,
+--                                                     boolean) CASCADE;
 
-CREATE OR REPLACE FUNCTION  z_get_string_dist(      idx             integer[],
+CREATE OR REPLACE FUNCTION  z_str_get_dist(      idx             integer[],
                                                     string_set      text[],
                                                     compare_tbl     text,
                                                     compare_col     text[],
@@ -35,13 +35,13 @@ CREATE OR REPLACE FUNCTION  z_get_string_dist(      idx             integer[],
                                                     nysiis          boolean default true,
                                                     rating_codex    boolean default true,
                                                     usps_repl_first boolean default true)
-RETURNS SETOF string_dist_results AS $$
+RETURNS SETOF z_str_dist_results AS $$
 
     from jellyfish              import cjellyfish as J
     from traceback              import format_exc       as tb_format_exc
     from sys                    import exc_info         as sys_exc_info
 
-    class string_dist_results:
+    class z_str_dist_results:
 
         def __init__(self,upd=None):
             if upd:

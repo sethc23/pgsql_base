@@ -1,7 +1,7 @@
 
 CREATE EXTENSION IF NOT EXISTS pllua;
 
-DROP FUNCTION IF EXISTS         z_str_comp_lcs( text,text );
+-- DROP FUNCTION IF EXISTS         z_str_comp_lcs( text,text );
 CREATE OR REPLACE FUNCTION      z_str_comp_lcs( s1              text,
                                                 s2              text)
 RETURNS                         text

@@ -1,7 +1,8 @@
 
 
 -- DROP FUNCTION z_get_seq_value(text);
-DROP FUNCTION IF EXISTS z_get_seq_value(text);
+-- DROP FUNCTION IF EXISTS z_get_seq_value(text);
+
 CREATE OR REPLACE FUNCTION z_get_seq_value(seq_name text)
   RETURNS integer AS
 $BODY$
