@@ -1,2 +1,6 @@
-__init__.pyc
-pgsql_classes.pyc
+*.pyc
+config.yaml
+__settings__.py
+settings.py
+dbsettings.py
+db_settings.py

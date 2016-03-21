@@ -1,4 +1,4 @@
-from ipdb import set_trace as i_trace
+# from ipdb import set_trace as i_trace
 # i_trace()
 
 class pgSQL_Functions:
@@ -501,7 +501,7 @@ class pgSQL_Types:
 class pgSQL:
     
 
-    def __init__(self,db_settings=[]):
+    def __init__(self,**kwargs):
         """
 
             pgSQL(db_settings=[DB_NAME, DB_USER, DB_PW, DB_HOST, DB_PORT])
@@ -571,6 +571,35 @@ class pgSQL:
             self.T.logging.basicConfig(filename=file_desc, level=self.T.logging.DEBUG, format=msg_form)
             return
 
+        def custom_geoseries_plot(s,figsize=(8,8)):
+            # s=T.gd.GeoSeries(A)
+            colormap='Set1'
+            axes=None
+            linewidth=1.0
+
+            import matplotlib.pyplot as plt
+            if axes is None:
+                fig, ax = plt.subplots(figsize=figsize)
+                ax.set_aspect('equal')
+            else:
+                ax = axes
+            ax.get_xaxis().get_major_formatter().set_scientific(False)
+            ax.get_xaxis().get_major_formatter().set_useOffset(False)
+            plt.xticks(rotation='vertical')
+            ax.get_yaxis().get_major_formatter().set_scientific(False)
+            ax.get_yaxis().get_major_formatter().set_useOffset(False)
+            color = T.gd.plotting.gencolor(len(s), colormap=colormap)
+            for geom in s:
+                if geom.type == 'Polygon' or geom.type == 'MultiPolygon':
+                    T.gd.plotting.plot_multipolygon(ax, geom, facecolor=next(color), linewidth=linewidth)
+                elif geom.type == 'LineString' or geom.type == 'MultiLineString':
+                    T.gd.plotting.plot_multilinestring(ax, geom, color=next(color), linewidth=linewidth)
+                elif geom.type == 'Point':
+                    T.gd.plotting.plot_point(ax, geom)
+            plt.ticklabel_format(style='plain')
+            plt.grid()
+            plt.draw()
+
         import                                  datetime                as dt
         from dateutil                           import parser           as DU               # e.g., DU.parse('some date as str') --> obj(datetime.datetime)
         from time                               import sleep
@@ -588,12 +617,25 @@ class pgSQL:
         from uuid                               import uuid4            as get_guid
         import                                  requests
 
-        if not db_settings:
-            from db_settings                    import DB_NAME,DB_HOST,DB_PORT,DB_USER,DB_PW
-        else:
-            DB_NAME,DB_USER,DB_PW,DB_HOST,DB_PORT = db_settings
-
         from py_classes                         import To_Sub_Classes,To_Class,To_Class_Dict
+        T                                   =   To_Class()
+
+        for k,v in kwargs.iteritems():
+            T[k] = v
+
+        db_vars = ['DB_NAME','DB_HOST','DB_PORT','DB_USER','DB_PW']
+        db_vars = [it for it in db_vars if not T._has_key(it)]
+
+        if locals().keys().count('db_settings'):
+            DB_NAME,DB_USER,DB_PW,DB_HOST,DB_PORT = db_settings
+            for it in db_vars:
+                eval('T["%s"] = %s' % (it,it))
+            
+        else:
+            z = eval("__import__('db_settings')")
+            for it in db_vars:
+                T[it] = getattr(z,it)
+        
         import                                  pandas                  as pd
         pd.set_option(                          'expand_frame_repr', False)
         pd.set_option(                          'display.max_columns', None)
@@ -607,36 +649,38 @@ class pgSQL:
         import logging
         logger = logging.getLogger(                      'sqlalchemy.dialects.postgresql')
         logger.setLevel(logging.INFO)
+        from sqlalchemy                         import create_engine
+        from psycopg2                           import connect          as pg_connect
         try:
-            from sqlalchemy                         import create_engine
-            from psycopg2                           import connect          as pg_connect
-            eng                                 =   create_engine(r'postgresql://%s:%s@%s:%s/%s'
-                                                              %(DB_USER,DB_PW,DB_HOST,DB_PORT,DB_NAME),
+            eng                             =   create_engine(r'postgresql://%(DB_USER)s:%(DB_PW)s@%(DB_HOST)s:%(DB_PORT)s/%(DB_NAME)s'
+                                                              % T,
                                                               encoding='utf-8',
                                                               echo=False)
-            conn                                =   pg_connect("dbname='%s' " % DB_NAME +
-                                                               "user='%s' " % DB_USER +
-                                                               "host='%s' password='%s' port=%s"
-                                                               % (DB_HOST,DB_PW,DB_PORT));
-            cur                                 =   conn.cursor()
+            conn                            =   pg_connect("dbname='%(DB_NAME)s' host='%(DB_HOST)s' port=%(DB_PORT)s \
+                                                           user='%(DB_USER)s' password='%(DB_PW)s' "
+                                                           % T);
+            cur                             =   conn.cursor()
+
         except:
             from getpass import getpass
-            pw = getpass('Root password (to create DB via CL): ')
-            p = sub_popen("""echo '%s' | sudo -S prompt='' su postgres -c "psql --cluster 9.4/main -c 'create database %s;'" """ % (pw,DB_NAME),
-                   stdout=sub_PIPE,
-                   shell=True)
+            pw = getpass('Root password (to create DB:"%(DB_NAME)s" via CL): ' % pgsql)
+            p = sub_popen(" ".join(["echo '%s' | sudo -S prompt='' " % pw,
+                                    'su postgres -c "psql --cluster 9.4/main -c ',
+                                    "'create database %(DB_NAME)s;'" % T,
+                                    '"']),
+                          stdout=sub_PIPE,
+                          shell=True)
             (_out, _err) = p.communicate()
             assert _err is None
 
-            eng                                 =   create_engine(r'postgresql://%s:%s@%s:%s/%s'
-                                                              %(DB_USER,DB_PW,DB_HOST,DB_PORT,DB_NAME),
+            eng                             =   create_engine(r'postgresql://%(DB_USER)s:%(DB_PW)s@%(DB_HOST)s:%(DB_PORT)s/%(DB_NAME)s'
+                                                              % T,
                                                               encoding='utf-8',
                                                               echo=False)
-            conn                                =   pg_connect("dbname='%s' " % DB_NAME +
-                                                               "user='%s' " % DB_USER +
-                                                               "host='%s' password='%s' port=%s"
-                                                               % (DB_HOST,DB_PW,DB_PORT));
-            cur                                 =   conn.cursor()
+            conn                            =   pg_connect("dbname='%(DB_NAME)s' host='%(DB_HOST)s' port=%(DB_PORT)s \
+                                                           user='%(DB_USER)s' password='%(DB_PW)s' "
+                                                           % T);
+            cur                             =   conn.cursor()
 
 
         import inspect, os
@@ -649,7 +693,7 @@ class pgSQL:
 
 
         self.T                              =   To_Class_Dict(  self,
-                                                                dict_list=[D,locals()],
+                                                                dict_list=[T.__dict__,D,locals()],
                                                                 update_globals=True)
 
         self.Functions                      =   pgSQL_Functions(self)
