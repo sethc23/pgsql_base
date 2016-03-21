@@ -577,9 +577,11 @@ class pgSQL:
             cur                             =   conn.cursor()
             return eng,conn,cur
 
-        import                                  datetime                as dt
+        import                                  datetime                as DT
+        dt = DT
         from dateutil                           import parser           as DU               # e.g., DU.parse('some date as str') --> obj(datetime.datetime)
-        from time                               import sleep
+        import                                  time
+        delay                               =   time.sleep
         from urllib                             import quote_plus,unquote
         from re                                 import findall          as re_findall
         from re                                 import sub              as re_sub           # re_sub('patt','repl','str','cnt')
@@ -594,12 +596,11 @@ class pgSQL:
         from uuid                               import uuid4            as get_guid
         import                                  requests
 
-        from py_classes                         import To_Sub_Classes,To_Class,To_Class_Dict
+        from py_classes.py_classes              import To_Sub_Classes,To_Class,To_Class_Dict
         T                                   =   To_Class()
-
-        for k,v in kwargs.iteritems():
-            T[k] = v
-
+        T.config                            =   To_Class(kwargs,recursive=True)
+        T.update(                               T.config.pgsql.__dict__)
+        
         db_vars = ['DB_NAME','DB_HOST','DB_PORT','DB_USER','DB_PW']
         db_vars = [it for it in db_vars if not T._has_key(it)]
 
