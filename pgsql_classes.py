@@ -124,12 +124,11 @@ class pgSQL_Functions:
 
         def batch_groups(self,sub_dir='sql_functions',grps=['admin','json','strings'],files=['all']):
             cmds = []
-            c_tmp = 'psql -d linkedin -c "%s ' + self.T.pg_classes_pwd + '/sql_functions/%s/%s;"'
+            c_tmp = 'psql -d '+self.T.DB_NAME+' -c "%s ' + '%s/%s' % (self.T.pg_classes_pwd,sub_dir) + '/%s/%s;"'
             
             files = files if type(files)==list else list(files)
             for d in grps:
                 for f in sorted(self.T.os.listdir('%s/%s/%s' % (self.T.pg_classes_pwd,sub_dir,d))):
-                    print d,f
                     if f.count('.sql'):
                         if files==['all']:
                             cmds.append( c_tmp % ('\\\\\\\\i',d,f) )
