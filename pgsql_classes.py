@@ -1,5 +1,6 @@
 # from ipdb import set_trace as i_trace
-# i_trace()
+# i_trace() 
+exec ""
 
 class pgSQL_Functions:
     """
@@ -120,20 +121,104 @@ class pgSQL_Functions:
                    shell=True).communicate()
 
             assert _err is None
-            print _out
+            print _out            
 
-        def batch_groups(self,sub_dir='sql_functions',grps=['admin','json','strings'],files=['all']):
+        def from_command_line(self,**kwargs):
+            """This function does something.
+
+                :param one_directory: The absolute directory path or directory path relative to the primary module 
+                from which the files are loaded in simple sort order. NOTE. IF DEFINED, OTHER PATH PARAMS IGNORED.
+                :type one_directory: str.
+
+                :param one_file: The absolute file path or file path relative to the primary module. NOTE. IF DEFINED, OTHER PATH PARAMS IGNORED.
+                :type one_file: str.
+
+                :param sub_dir: The relative directory to this file.
+                :type sub_dir: str.
+
+                :param grps: A sequence list of relative subdirectories for loading files.
+                :type grps: list.
+
+                :param files: A specific list of files to only load.
+                :type files: list.
+
+                :param regex_exclude: A list of files matching provided regex and excluded from loading.
+                :type files: list.         
+
+                :returns:  None
+
+                """
+            def get_psql_path():
+                p = self.T.sub_popen('; '.join(['unalias psql > /dev/null 2>&1',
+                                                'unset psql > /dev/null 2>&1',
+                                                'which psql']),
+                                      stdout=self.T.sub_PIPE,
+                                      shell=True)
+                (_out, _err) = p.communicate()
+                assert _err is None
+                return _out.rstrip('\n')
+
+            # Defaults:
+            one_file = None if not kwargs.has_key('one_file') else kwargs['one_file']
+            one_directory = None if not kwargs.has_key('one_directory') else kwargs['one_directory']
+            sub_dir = 'sql_functions'
+            grps = ['admin','json','strings']
+            files = ['all']
+            regex_exclude = [r'(?iLmsux).*/(_[^\/]+)[.]sql$']
+
+
+            for name, value in kwargs.iteritems():
+                # import ipdb as I; I.set_trace()
+                if not value.isdigit():
+                    exec '%s = "%s"' % (name, value) in globals(),locals()
+                else:
+                    exec '%s = %s' % (name, value) in globals(),locals()
+
             cmds = []
-            c_tmp = 'psql -d '+self.T.DB_NAME+' -c "%s ' + '%s/%s' % (self.T.pg_classes_pwd,sub_dir) + '/%s/%s;"'
-            
-            files = files if type(files)==list else list(files)
-            for d in grps:
-                for f in sorted(self.T.os.listdir('%s/%s/%s' % (self.T.pg_classes_pwd,sub_dir,d))):
-                    if f.count('.sql'):
-                        if files==['all']:
-                            cmds.append( c_tmp % ('\\\\\\\\i',d,f) )
-                        elif files.count(f):
-                            cmds.append( c_tmp % ('\\\\\\\\i',d,f) )
+            # cmd_template = ''.join(['psql -d '+self.T.DB_NAME+' -c "%s ' + '%s/%s' % (self.T.pg_classes_pwd,sub_dir) + '/%s/%s;"'
+            # sh_cmd_template = 'psql --dbname=%(DB_NAME)s --host=%(DB_HOST)s --port=%(DB_PORT)s --username=%(DB_USER)s --command="%(COMMAND)s"'
+            sh_cmd_template = ' '.join(['%(PSQL_PATH)s --dbname=%(DB_NAME)s --host=%(DB_HOST)s',
+                                        '--port=%(DB_PORT)s --username=%(DB_USER)s --file=%(FPATH)s'])
+            D = self.T.config.__dict__
+            D['PSQL_PATH'] = get_psql_path()
+
+            if one_directory: 
+                dir_list=[]
+                for root, sub_dirs, files in self.T.os.walk(self.T.os.path.abspath(one_directory)):
+                    for f in files:
+                        if not regex_exclude:
+                            dir_list.append(self.T.os.path.join(root,f))
+                        else:
+                            fpath = self.T.os.path.join(root,f)
+                            for regex in regex_exclude:
+                                if type(self.T.re.match(regex,fpath))==self.T.NoneType:
+                                    dir_list.append(fpath)
+                        
+                fpaths = sorted(dir_list)
+                
+                for it in fpaths:
+                    D['FPATH'] = it
+                    cmds.append( sh_cmd_template % D)
+
+            elif one_file:
+                D['FPATH'] = self.T.os.path.abspath(one_file)
+                cmds.append( sh_cmd_template % D)
+
+            else:
+                files = files if type(files)==list else list(files)
+                for d in grps:
+                    for f in sorted(self.T.os.listdir('%s/%s/%s' % (self.T.pg_classes_pwd,sub_dir,d))):
+                        if f.count('.sql'):
+                            if files.count(f) or files==['all']:
+
+                                # cmds.append( cmd_template % ('\\\\\\\\i',d,f) )
+
+                                D['FPATH'] = ''.join([  '%s/%s' % (self.T.pg_classes_pwd,sub_dir),
+                                                        '/%s/%s' % (d,f) ])
+                                cmds.append( sh_cmd_template % D )
+
+            # -----------
+
             cmds = '\n'.join(cmds)
             qry = """
                 DO E'#!/bin/sh
@@ -141,9 +226,10 @@ class pgSQL_Functions:
                     export PGOPTIONS="--client-min-messages=warning"
                     %s
                     unset PGOPTIONS
-                    ' LANGUAGE plsh;
+                    ' LANGUAGE plshu;
                 """ % cmds
-            self.T.to_sql(                      qry)
+            self.T.to_sql(qry)
+            
 
         def z_next_free(self):
             self.PG.F.functions_destroy_z_next_free()
@@ -225,7 +311,6 @@ class pgSQL_Functions:
                     q.append(q_temp % (r.f_name,arg_types))
             qry = ' '.join(q)
             self.T.to_sql(                      qry)
-
 
 class pgSQL_Triggers:
 
@@ -582,6 +667,7 @@ class pgSQL:
         import                                  time
         delay                               =   time.sleep
         from urllib                             import quote_plus,unquote
+        import re
         from re                                 import findall          as re_findall
         from re                                 import sub              as re_sub           # re_sub('patt','repl','str','cnt')
         from re                                 import search           as re_search        # re_search('patt','str')
@@ -598,7 +684,7 @@ class pgSQL:
         from py_classes.py_classes              import To_Sub_Classes,To_Class,To_Class_Dict
         T                                   =   To_Class()
         T.config                            =   To_Class(kwargs,recursive=True)
-        T.update(                               T.config.pgsql.__dict__)
+        T.update(                               T.config.__dict__)
         
         db_vars = ['DB_NAME','DB_HOST','DB_PORT','DB_USER','DB_PW']
         db_vars = [it for it in db_vars if not T._has_key(it)]
@@ -627,7 +713,7 @@ class pgSQL:
         np.set_printoptions(                    linewidth=1500,threshold=np.nan)
         # import                                  geopandas               as gd
         import logging
-        logger = logging.getLogger(                      'sqlalchemy.dialects.postgresql')
+        logger = logging.getLogger(             'sqlalchemy.dialects.postgresql')
         logger.setLevel(logging.INFO)
         from sqlalchemy                         import create_engine
         from psycopg2                           import connect          as pg_connect
@@ -663,10 +749,15 @@ class pgSQL:
         self.Triggers                       =   pgSQL_Triggers(self)
         self.Tables                         =   pgSQL_Tables(self)
         self.Types                          =   pgSQL_Types(self)
+
+        # if hasattr(T,'project_sql_files') and T.project_sql_files:
+        #     self.F.functions_create_from_command_line(one_directory=T.project_sql_files)
+        # if hasattr(T,'base_sql_files') and T.base_sql_files:
+        #     self.F.functions_create_from_command_line(one_directory=T.base_sql_files)  
         if hasattr(T,'initial_check') and T.initial_check:
-            self.__initial_check__(                 )
+            self.__initial_check__()
         if hasattr(T,'temp_options') and T.temp_options:
-            self.__temp_options__(                  )
+            self.__temp_options__()
 
     def __initial_check__(self):
         # at minimum, confirm that geometry is enabled
