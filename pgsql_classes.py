@@ -89,7 +89,27 @@ class pgSQL_Functions:
             """ % {'tbl':table_name,'uid_col':uid_col,'sort_by':sort_by}
             self.T.to_sql(qry)
 
-        def get_all_functions(self):
+        def get_function_info(self,func):
+            q = """
+                SELECT 
+                    proname f_name, 
+                    prolang f_lang,
+                    proisagg is_agg,
+                    CASE
+                    WHEN provolatile='v' THEN 'true'
+                    ELSE 'false'
+                    END as is_volatile,
+                    proallargtypes all_arg_type,
+                    proargtypes arg_types,
+                    pronargdefaults arg_defaults,
+                    prorettype return_type,
+                    prosrc src
+                FROM pg_proc 
+                WHERE proname ilike '%s'
+                """ % func
+            return                              self.T.pd.read_sql(qry,self.T.eng)
+
+        def get_general_function_info(self):
             q = """
                 SELECT n.nspname as "Schema",
                     p.proname as "f_name",
@@ -328,6 +348,17 @@ class pgSQL_Triggers:
                                                     AND evtenabled='O');
                                                 """ % trigger_name
             return                              self.T.pd.read_sql(qry,self.T.eng).exists[0]
+        def tbl_trigger(self,trigger_name,tbl_name):
+            qry                             =   """
+                                                SELECT EXISTS (SELECT 1
+                                                    FROM pg_trigger t
+                                                    INNER JOIN pg_class c 
+                                                    ON t.tgrelid=c.relfilenode
+                                                    WHERE NOT tgisinternal
+                                                    AND relname='%s'
+                                                    AND tgname ilike '%s');
+                                                """ % (trigger_name,tbl_name)
+            return                              self.T.pd.read_sql(qry,self.T.eng).exists[0]
 
     class Enabled:
         def __init__(self,_parent):
@@ -338,6 +369,18 @@ class pgSQL_Triggers:
                                                     FROM pg_event_trigger
                                                     WHERE evtname='%s');
                                                 """ % trigger_name
+            return                              self.T.pd.read_sql(qry,self.T.eng).exists[0]
+        def tbl_trigger(self,trigger_name,tbl_name):
+            qry                             =   """
+                                                SELECT EXISTS (SELECT 1
+                                                    FROM pg_trigger t
+                                                    INNER JOIN pg_class c 
+                                                    ON t.tgrelid=c.relfilenode
+                                                    WHERE NOT tgisinternal
+                                                    AND relname='%s'
+                                                    AND tgname ilike '%s'
+                                                    AND tgenabled = 'O');
+                                                """ % (trigger_name,tbl_name)
             return                              self.T.pd.read_sql(qry,self.T.eng).exists[0]
 
     class Create:
@@ -435,7 +478,7 @@ class pgSQL_Tables:
                                                 """ % table_name
         return                                  self.T.pd.read_sql(qry,self.T.eng).exists[0]
 
-    def get_info(self,table_name):
+    def get_info(self,tbl_name):
         qry                                 =   """
                                                 WITH primary_key_info AS (
                                                     SELECT a.attname, format_type(a.atttypid, a.atttypmod) AS data_type_pk
@@ -462,7 +505,26 @@ class pgSQL_Tables:
                                                     is_nullable
                                                 FROM gen_info;
 
-                                                """ % (table_name,table_name)
+                                                """ % (tbl_name,tbl_name)
+        return                                  self.T.pd.read_sql(qry,self.T.eng)
+
+    def get_triggers(self,tbl_name):
+        qry                                 =   """
+                                                SELECT  c.relname tbl_name,
+                                                        t.tgname trigger_name,
+                                                        CASE
+                                                            WHEN t.tgenabled = 'O' THEN true
+                                                            ELSE false
+                                                        END AS is_enabled,
+                                                        tgattr column_triggers,
+                                                        tgnargs arg_str_cnt,
+                                                        tgargs arg_strs
+                                                FROM pg_trigger t
+                                                INNER JOIN pg_class c 
+                                                ON t.tgrelid=c.relfilenode
+                                                WHERE NOT tgisinternal
+                                                AND relname='%s';
+                                                """ % tbl_name
         return                                  self.T.pd.read_sql(qry,self.T.eng)
 
     def has_col(self,table_name,column_name):
@@ -684,7 +746,8 @@ class pgSQL:
         from py_classes.py_classes              import To_Sub_Classes,To_Class,To_Class_Dict
         T                                   =   To_Class()
         T.config                            =   To_Class(kwargs,recursive=True)
-        T.update(                               T.config.__dict__)
+        if hasattr(T,'config') and hasattr(T.config,'pgsql'): 
+            T.update(                           T.config.pgsql.__dict__)
         
         db_vars = ['DB_NAME','DB_HOST','DB_PORT','DB_USER','DB_PW']
         db_vars = [it for it in db_vars if not T._has_key(it)]
