@@ -12,10 +12,10 @@ stop=False
 T = {'tbl':table_name,'uid_col':uid_col,'_seq':_seq}
 p = """
 
-            select count(column_name) c
-            from INFORMATION_SCHEMA.COLUMNS
-            where table_name = '%(tbl)s'
-            and column_name = '%(uid_col)s';
+            SELECT COUNT(column_name) c
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE table_name = '%(tbl)s'
+            AND column_name = '%(uid_col)s';
 
     """ % T
 cnt = plpy.execute(p)[0]['c']

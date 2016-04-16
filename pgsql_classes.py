@@ -90,7 +90,7 @@ class pgSQL_Functions:
             self.T.to_sql(qry)
 
         def get_function_info(self,func):
-            q = """
+            qry = """
                 SELECT 
                     proname f_name, 
                     prolang f_lang,
