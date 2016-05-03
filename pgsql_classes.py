@@ -545,7 +545,8 @@ class pgSQL_Tables:
                                                     WHERE pg_class.oid = pg_attribute.attrelid AND
                                                         pg_class.oid = pg_index.indrelid AND
                                                         pg_index.indkey[0] = pg_attribute.attnum AND
-                                                        pg_index.indisprimary = 't';
+                                                        pg_index.indisprimary = 't' AND
+                                                        NOT pg_class.relname ILIKE 'pg_%%';
                                                 """
         return                                  self.T.pd.read_sql(qry,self.T.eng)
 
@@ -567,6 +568,19 @@ class pgSQL_Tables:
             self.F.functions_run_make_column_primary_serial_key(tbl_name)
             # if not self.F.functions_check_primary_key(tbl_name):
             #     self.F.functions_run_make_column_primary_serial_key(tbl_name,'uid')
+
+class pgSQL_Databases:
+
+    def __init__(self,_parent):
+        self                                =   _parent.T.To_Sub_Classes(self,_parent)
+
+    def get_all(self):
+        qry                                 =   """
+                                                SELECT datname FROM pg_database
+                                                WHERE datistemplate = false
+
+                                                """
+        return                                  self.T.pd.read_sql(qry,self.T.eng)
 
 class pgSQL_Types:
 
@@ -619,6 +633,14 @@ class pgSQL:
             pgSQL(db_settings=[DB_NAME, DB_USER, DB_PW, DB_HOST, DB_PORT])
 
         """
+
+        def run_cmd(cmd):
+            p = sub_popen(cmd,stdout=sub_PIPE,
+                          shell=True,
+                          executable='/bin/bash')
+            (_out,_err) = p.communicate()
+            assert _err is None
+            return _out.rstrip('\n')
 
         def download_file(url,save_path):
             import os
@@ -748,10 +770,12 @@ class pgSQL:
         T.config                            =   To_Class(kwargs,recursive=True)
         if hasattr(T,'config') and hasattr(T.config,'pgsql'): 
             T.update(                           T.config.pgsql.__dict__)
+        else:
+            T.update(                           T.config.__dict__)
         
         db_vars = ['DB_NAME','DB_HOST','DB_PORT','DB_USER','DB_PW']
         db_vars = [it for it in db_vars if not T._has_key(it)]
-
+        
         if not db_vars:
             pass
 
@@ -811,6 +835,7 @@ class pgSQL:
         self.Functions                      =   pgSQL_Functions(self)
         self.Triggers                       =   pgSQL_Triggers(self)
         self.Tables                         =   pgSQL_Tables(self)
+        self.Databases                      =   pgSQL_Databases(self)
         self.Types                          =   pgSQL_Types(self)
 
         # if hasattr(T,'project_sql_files') and T.project_sql_files:
