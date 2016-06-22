@@ -1,0 +1,3 @@
+[submodule "py_classes"]
+	path = py_classes
+	url = /home/ub2/BD_Scripts/py_classes.git
