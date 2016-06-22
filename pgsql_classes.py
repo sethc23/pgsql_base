@@ -809,7 +809,7 @@ class pgSQL:
 
         except:
             from getpass import getpass
-            pw = getpass('Root password (to create DB:"%(DB_NAME)s" via CL): ' % pgsql)
+            pw = getpass('Root password (to create DB:"%(DB_NAME)s" via CL): ' % T)
             p = sub_popen(" ".join(["echo '%s' | sudo -S prompt='' " % pw,
                                     'su postgres -c "psql --cluster 9.4/main -c ',
                                     "'create database %(DB_NAME)s;'" % T,
