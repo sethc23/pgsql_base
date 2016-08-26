@@ -65,7 +65,7 @@ class pgSQL_Functions:
                                                 """ % T
             self.T.to_sql(                      cmd)
 
-        def confirm_extensions(self,exts=['plpythonu','pllua','plsh'],verbose=False):
+        def confirm_extensions(self,exts=['plpythonu','pllua','plshu'],verbose=False):
             qry =   '\n'.join(['CREATE EXTENSION IF NOT EXISTS %s;' % it for it in exts])
             self.T.to_sql(                      qry)
             if verbose:                         print 'Extensions Confirmed'
@@ -128,7 +128,7 @@ class pgSQL_Functions:
                     AND n.nspname <> 'information_schema'
                 ORDER BY 1, 2, 4;
                 """
-            return                              self.T.pd.read_sql(qry,self.T.eng)
+            return                              self.T.pd.read_sql(q,self.T.eng)
 
     class Create:
 
@@ -144,8 +144,7 @@ class pgSQL_Functions:
             print _out            
 
         def from_command_line(self,**kwargs):
-            """This function does something.
-
+            """
                 :param one_directory: The absolute directory path or directory path relative to the primary module 
                 from which the files are loaded in simple sort order. NOTE. IF DEFINED, OTHER PATH PARAMS IGNORED.
                 :type one_directory: str.
@@ -167,7 +166,7 @@ class pgSQL_Functions:
 
                 :returns:  None
 
-                """
+            """
             def get_psql_path():
                 p = self.T.sub_popen('; '.join(['unalias psql > /dev/null 2>&1',
                                                 'unset psql > /dev/null 2>&1',
@@ -252,34 +251,34 @@ class pgSQL_Functions:
             
 
         def z_next_free(self):
-            self.PG.F.functions_destroy_z_next_free()
-            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.functions_destroy_z_next_free()
+            self.F.functions_create_batch_groups(sub_dir='sql_functions',
                                                     grps=['admin'],
                                                     files=['1_z_next_free.sql'])
         def z_get_seq_value(self):
-            self.PG.F.functions_destroy_z_get_seq_value()
-            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.functions_destroy_z_get_seq_value()
+            self.F.functions_create_batch_groups(sub_dir='sql_functions',
                                                     grps=['admin'],
                                                     files=['2_z_get_seq_value.sql'])
         def z_array_sort(self):
-            self.PG.F.functions_destroy_z_array_sort()
-            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.functions_destroy_z_array_sort()
+            self.F.functions_create_batch_groups(sub_dir='sql_functions',
                                                     grps=['admin'],
                                                     files=['5_z_array_sort.sql'])
         def z_make_column_primary_serial_key(self):
-            self.PG.F.functions_destroy_z_make_column_primary_serial_key()
-            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.functions_destroy_z_make_column_primary_serial_key()
+            self.F.functions_create_batch_groups(sub_dir='sql_functions',
                                                     grps=['admin'],
                                                     files=['6_z_make_column_primary_serial_key.sql'])
 
         def json_functions(self):
-            self.PG.F.functions_destroy_json_functions()
-            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.functions_destroy_json_functions()
+            self.F.functions_create_batch_groups(sub_dir='sql_functions',
                                                     grps=['json'],
                                                     files=['all'])
         def string_functions(self):
-            self.PG.F.functions_destroy_string_functions()
-            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.functions_destroy_string_functions()
+            self.F.functions_create_batch_groups(sub_dir='sql_functions',
                                                     grps=['string'],
                                                     files=['all'])
 
@@ -314,17 +313,18 @@ class pgSQL_Functions:
 
         def json_functions(self):
             q,q_temp = [],'DROP FUNCTION IF EXISTS %s(%s) CASCADE;'
-            df = self.PG.F.functions_run_get_all_functions()
-            for i,r in df.iterrows():
-                if str(r.f_name).find('json_')==0:
-                    arg_types = str([str(it.split()[1]) for it in r.arg_types.split(',')]).strip('[]').replace("'",'')
-                    q.append(q_temp % (r.f_name,arg_types))
-            qry = ' '.join(q)
-            self.T.to_sql(                      qry)
+            df = self.F.functions_run_get_general_function_info()
+            if len(df):
+                for i,r in df.iterrows():
+                    if str(r.f_name).find('json_')==0:
+                        arg_types = str([str(it.split()[1]) for it in r.arg_types.split(',')]).strip('[]').replace("'",'')
+                        q.append(q_temp % (r.f_name,arg_types))
+                qry = ' '.join(q)
+                self.T.to_sql(                      qry)
 
         def string_functions(self):
             q,q_temp = [],'DROP FUNCTION IF EXISTS %s(%s) CASCADE;'
-            df = self.PG.F.functions_run_get_all_functions()
+            df = self.F.functions_run_get_all_functions()
             for i,r in df.iterrows():
                 if str(r.f_name).find('z_str_')==0:
                     arg_types = str([str(it.split()[1]) for it in r.arg_types.split(',')]).strip('[]').replace("'",'')
@@ -388,15 +388,15 @@ class pgSQL_Triggers:
             self                            =   _parent.T.To_Sub_Classes(self,_parent)
 
         def z_auto_add_primary_key(self):
-            self.PG.F.triggers_destroy_z_auto_add_primary_key()
+            self.F.triggers_destroy_z_auto_add_primary_key()
             
             self.F.functions_create_z_next_free()
-            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.functions_create_batch_groups(sub_dir='sql_functions',
                                                     grps=['admin'],
                                                     files=['3_z_auto_add_primary_key.sql'])
         def z_auto_add_last_updated_field(self):
-            self.PG.F.triggers_destroy_z_auto_add_last_updated_field()
-            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.triggers_destroy_z_auto_add_last_updated_field()
+            self.F.functions_create_batch_groups(sub_dir='sql_functions',
                                                     grps=['admin'],
                                                     files=['4_z_auto_add_last_updated_field.sql'])
         def z_auto_update_timestamp(self,tbl,col):
@@ -764,13 +764,12 @@ class pgSQL:
         from time                               import sleep            as delay
         from uuid                               import uuid4            as get_guid
         import                                  requests
-
-        from py_classes.py_classes              import To_Sub_Classes,To_Class,To_Class_Dict
+        from py_classes                         import To_Sub_Classes,To_Class,To_Class_Dict
         T                                   =   To_Class()
         T.config                            =   To_Class(kwargs,recursive=True)
         if hasattr(T,'config') and hasattr(T.config,'pgsql'): 
             T.update(                           T.config.pgsql.__dict__)
-        else:
+        elif hasattr(T,'config'):
             T.update(                           T.config.__dict__)
         
         db_vars = ['DB_NAME','DB_HOST','DB_PORT','DB_USER','DB_PW']
@@ -809,7 +808,7 @@ class pgSQL:
 
         except:
             from getpass import getpass
-            pw = getpass('Root password (to create DB:"%(DB_NAME)s" via CL): ' % pgsql)
+            pw = getpass('Root password (to create DB:"%(DB_NAME)s" via CL): ' % T)
             p = sub_popen(" ".join(["echo '%s' | sudo -S prompt='' " % pw,
                                     'su postgres -c "psql --cluster 9.4/main -c ',
                                     "'create database %(DB_NAME)s;'" % T,
