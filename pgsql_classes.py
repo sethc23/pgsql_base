@@ -199,7 +199,8 @@ class pgSQL_Functions:
             sh_cmd_template = ' '.join(['%(PSQL_PATH)s --dbname=%(DB_NAME)s --host=%(DB_HOST)s',
                                         '--port=%(DB_PORT)s --username=%(DB_USER)s --file=%(FPATH)s'])
             D = self.T.config.__dict__
-            D['PSQL_PATH'] = get_psql_path()
+            # D['PSQL_PATH'] = get_psql_path()
+            D['PSQL_PATH'] = "/usr/local/bin/psql"
 
             if one_directory: 
                 dir_list=[]
@@ -673,6 +674,7 @@ class pgSQL:
             return a
 
         def to_sql(cmd):
+            # print(cmd)
             self.T.conn.set_isolation_level(    0)
             self.T.cur.execute(                 cmd)
 
@@ -768,13 +770,17 @@ class pgSQL:
         T                                   =   To_Class()
         T.config                            =   To_Class(kwargs,recursive=True)
         if hasattr(T,'config') and hasattr(T.config,'pgsql'): 
-            T.update(                           T.config.pgsql.__dict__)
-        elif hasattr(T,'config'):
-            T.update(                           T.config.__dict__)
+            T.__dict__.update(                  T.config.pgsql.__dict__)
+        if hasattr(T,'config'):
+            T.__dict__.update(                  T.config.__dict__)
+        if hasattr(T,'db_settings'):
+            T.__dict__.update(                  T.db_settings.__dict__)
         
         db_vars = ['DB_NAME','DB_HOST','DB_PORT','DB_USER','DB_PW']
         db_vars = [it for it in db_vars if not T._has_key(it)]
-        
+
+        # import ipdb as I; I.set_trace()
+
         if not db_vars:
             pass
 
