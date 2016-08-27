@@ -767,15 +767,18 @@ class pgSQL:
         from uuid                               import uuid4            as get_guid
         import                                  requests
         from py_classes                         import To_Sub_Classes,To_Class,To_Class_Dict
-        T                                   =   To_Class()
-        T.config                            =   To_Class(kwargs,recursive=True)
+        T                                   =   To_Class(kwargs,recursive=True)
+        
+        # PUT ALL KWARGS AS T.config
+        # T.config                            =   To_Class(kwargs,recursive=True)
+
         if hasattr(T,'config') and hasattr(T.config,'pgsql'): 
             T.__dict__.update(                  T.config.pgsql.__dict__)
         if hasattr(T,'config'):
             T.__dict__.update(                  T.config.__dict__)
         if hasattr(T,'db_settings'):
             T.__dict__.update(                  T.db_settings.__dict__)
-        
+
         db_vars = ['DB_NAME','DB_HOST','DB_PORT','DB_USER','DB_PW']
         db_vars = [it for it in db_vars if not T._has_key(it)]
 
