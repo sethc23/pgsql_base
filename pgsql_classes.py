@@ -443,14 +443,23 @@ class pgSQL_Triggers:
             self.T.conn.set_isolation_level(0)
             self.T.cur.execute(c)
 
+    class Show:
+
+        def __init__(self,_parent):
+            self                            =   _parent.T.To_Sub_Classes(self,_parent)
+
+        def event_triggers(self):
+            cmd                             =   "select * from pg_event_trigger"
+            self.T.to_sql(                      cmd)
+
+
     class Operate:
         def __init__(self,_parent):
             self                            =   _parent.T.To_Sub_Classes(self,_parent)
 
         def disable_tbl_trigger(self,tbl,trigger_name):
             cmd = "ALTER TABLE %(tbl)s DISABLE TRIGGER %(trig)s;" % {'tbl':tbl,'trig':trigger_name}
-            self.T.conn.set_isolation_level(        0)
-            self.T.cur.execute(                     cmd)
+            self.T.to_sql(                      cmd)
         def enable_tbl_trigger(self,tbl,trigger_name):
             if trigger_name=='z_auto_add_primary_key':
                 trigger_name                =   'missing_primary_key_trigger'
