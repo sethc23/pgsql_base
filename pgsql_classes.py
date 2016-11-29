@@ -279,7 +279,7 @@ class pgSQL_Functions:
                                                     files=['all'])
         def string_functions(self):
             self.F.functions_destroy_string_functions()
-            self.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.functions_from_command_line(sub_dir='sql_functions',
                                                     grps=['string'],
                                                     files=['all'])
 
@@ -325,12 +325,13 @@ class pgSQL_Functions:
 
         def string_functions(self):
             q,q_temp = [],'DROP FUNCTION IF EXISTS %s(%s) CASCADE;'
-            df = self.F.functions_run_get_all_functions()
+            df = self.F.functions_run_get_general_function_info()
             for i,r in df.iterrows():
                 if str(r.f_name).find('z_str_')==0:
                     arg_types = str([str(it.split()[1]) for it in r.arg_types.split(',')]).strip('[]').replace("'",'')
                     q.append(q_temp % (r.f_name,arg_types))
             qry = ' '.join(q)
+            print qry
             self.T.to_sql(                      qry)
 
 class pgSQL_Triggers:
@@ -500,23 +501,27 @@ class pgSQL_Tables:
                                                     ),
                                                 gen_info AS (
                                                     SELECT 
-                                                        column_name, data_type, character_maximum_length,
-                                                        column_default,is_nullable,data_type_pk
+                                                        column_name
+                                                        ,data_type
+                                                        ,udt_name
+                                                        ,character_maximum_length
+                                                        ,column_default
+                                                        ,CASE
+                                                            WHEN data_type_pk is NULL THEN NULL
+                                                            ELSE true 
+                                                        END is_primary_key
+                                                        ,is_nullable
                                                     FROM INFORMATION_SCHEMA.COLUMNS
                                                     LEFT JOIN primary_key_info pk ON pk.attname = column_name
                                                     WHERE table_name = '%s'
                                                     )    
-                                                SELECT 
-                                                    column_name, data_type, character_maximum_length,
-                                                    column_default,
-                                                        CASE
-                                                        WHEN data_type_pk is NULL THEN NULL
-                                                        ELSE true END is_primary_key,
-                                                    is_nullable
-                                                FROM gen_info;
+                                                SELECT * FROM gen_info;
 
                                                 """ % (tbl_name,tbl_name)
-        return                                  self.T.pd.read_sql(qry,self.T.eng)
+        df                                  =   self.T.pd.read_sql(qry,self.T.eng).sort_values('column_name')
+        for i,r in df[df.column_name=='ARRAY'].iterrows():
+            df.set_value(i,'data_type','%s[]' % r['udt_name'].strip('_'))
+        return df
 
     def get_triggers(self,tbl_name):
         qry                                 =   """
