@@ -20,6 +20,21 @@ class pgSQL_Functions:
                                                 """ % funct_name
         return                                  self.T.pd.read_sql(qry,self.T.eng).exists[0]
 
+    class Get:
+        def __init__(self,_parent):
+            self                            =   _parent.T.To_Sub_Classes(self,_parent)
+        def event_triggers(self,only_enabled=False,only_disabled=False):
+            qry                             =   """
+                                                SELECT *
+                                                FROM pg_event_trigger
+                                                
+                                                """
+            if only_enabled or only_disabled:
+                _v = 'O' if only_enabled else '1' if only_disabled else None
+                qry                        +=   "WHERE evtenabled='%s'" % _v
+
+            return                              self.T.pd.read_sql(qry,self.T.eng)
+
     class Check:
         def __init__(self,_parent):
             self                            =   _parent.T.To_Sub_Classes(self,_parent)
@@ -65,7 +80,7 @@ class pgSQL_Functions:
                                                 """ % T
             self.T.to_sql(                      cmd)
 
-        def confirm_extensions(self,exts=['plpythonu','pllua','plsh'],verbose=False):
+        def confirm_extensions(self,exts=['plpythonu','pllua','plshu'],verbose=False):
             qry =   '\n'.join(['CREATE EXTENSION IF NOT EXISTS %s;' % it for it in exts])
             self.T.to_sql(                      qry)
             if verbose:                         print 'Extensions Confirmed'
@@ -128,7 +143,7 @@ class pgSQL_Functions:
                     AND n.nspname <> 'information_schema'
                 ORDER BY 1, 2, 4;
                 """
-            return                              self.T.pd.read_sql(qry,self.T.eng)
+            return                              self.T.pd.read_sql(q,self.T.eng)
 
     class Create:
 
@@ -144,8 +159,7 @@ class pgSQL_Functions:
             print _out            
 
         def from_command_line(self,**kwargs):
-            """This function does something.
-
+            """
                 :param one_directory: The absolute directory path or directory path relative to the primary module 
                 from which the files are loaded in simple sort order. NOTE. IF DEFINED, OTHER PATH PARAMS IGNORED.
                 :type one_directory: str.
@@ -167,7 +181,7 @@ class pgSQL_Functions:
 
                 :returns:  None
 
-                """
+            """
             def get_psql_path():
                 p = self.T.sub_popen('; '.join(['unalias psql > /dev/null 2>&1',
                                                 'unset psql > /dev/null 2>&1',
@@ -200,7 +214,8 @@ class pgSQL_Functions:
             sh_cmd_template = ' '.join(['%(PSQL_PATH)s --dbname=%(DB_NAME)s --host=%(DB_HOST)s',
                                         '--port=%(DB_PORT)s --username=%(DB_USER)s --file=%(FPATH)s'])
             D = self.T.config.__dict__
-            D['PSQL_PATH'] = get_psql_path()
+            # D['PSQL_PATH'] = get_psql_path()
+            D['PSQL_PATH'] = "/usr/local/bin/psql"
 
             if one_directory: 
                 dir_list=[]
@@ -252,34 +267,34 @@ class pgSQL_Functions:
             
 
         def z_next_free(self):
-            self.PG.F.functions_destroy_z_next_free()
-            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.functions_destroy_z_next_free()
+            self.F.functions_create_batch_groups(sub_dir='sql_functions',
                                                     grps=['admin'],
                                                     files=['1_z_next_free.sql'])
         def z_get_seq_value(self):
-            self.PG.F.functions_destroy_z_get_seq_value()
-            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.functions_destroy_z_get_seq_value()
+            self.F.functions_create_batch_groups(sub_dir='sql_functions',
                                                     grps=['admin'],
                                                     files=['2_z_get_seq_value.sql'])
         def z_array_sort(self):
-            self.PG.F.functions_destroy_z_array_sort()
-            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.functions_destroy_z_array_sort()
+            self.F.functions_create_batch_groups(sub_dir='sql_functions',
                                                     grps=['admin'],
                                                     files=['5_z_array_sort.sql'])
         def z_make_column_primary_serial_key(self):
-            self.PG.F.functions_destroy_z_make_column_primary_serial_key()
-            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.functions_destroy_z_make_column_primary_serial_key()
+            self.F.functions_create_batch_groups(sub_dir='sql_functions',
                                                     grps=['admin'],
                                                     files=['6_z_make_column_primary_serial_key.sql'])
 
         def json_functions(self):
-            self.PG.F.functions_destroy_json_functions()
-            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.functions_destroy_json_functions()
+            self.F.functions_create_batch_groups(sub_dir='sql_functions',
                                                     grps=['json'],
                                                     files=['all'])
         def string_functions(self):
-            self.PG.F.functions_destroy_string_functions()
-            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.functions_destroy_string_functions()
+            self.F.functions_create_batch_groups(sub_dir='sql_functions',
                                                     grps=['string'],
                                                     files=['all'])
 
@@ -314,17 +329,18 @@ class pgSQL_Functions:
 
         def json_functions(self):
             q,q_temp = [],'DROP FUNCTION IF EXISTS %s(%s) CASCADE;'
-            df = self.PG.F.functions_run_get_all_functions()
-            for i,r in df.iterrows():
-                if str(r.f_name).find('json_')==0:
-                    arg_types = str([str(it.split()[1]) for it in r.arg_types.split(',')]).strip('[]').replace("'",'')
-                    q.append(q_temp % (r.f_name,arg_types))
-            qry = ' '.join(q)
-            self.T.to_sql(                      qry)
+            df = self.F.functions_run_get_general_function_info()
+            if len(df):
+                for i,r in df.iterrows():
+                    if str(r.f_name).find('json_')==0:
+                        arg_types = str([str(it.split()[1]) for it in r.arg_types.split(',')]).strip('[]').replace("'",'')
+                        q.append(q_temp % (r.f_name,arg_types))
+                qry = ' '.join(q)
+                self.T.to_sql(                      qry)
 
         def string_functions(self):
             q,q_temp = [],'DROP FUNCTION IF EXISTS %s(%s) CASCADE;'
-            df = self.PG.F.functions_run_get_all_functions()
+            df = self.F.functions_run_get_all_functions()
             for i,r in df.iterrows():
                 if str(r.f_name).find('z_str_')==0:
                     arg_types = str([str(it.split()[1]) for it in r.arg_types.split(',')]).strip('[]').replace("'",'')
@@ -388,15 +404,15 @@ class pgSQL_Triggers:
             self                            =   _parent.T.To_Sub_Classes(self,_parent)
 
         def z_auto_add_primary_key(self):
-            self.PG.F.triggers_destroy_z_auto_add_primary_key()
+            self.F.triggers_destroy_z_auto_add_primary_key()
             
             self.F.functions_create_z_next_free()
-            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.functions_create_batch_groups(sub_dir='sql_functions',
                                                     grps=['admin'],
                                                     files=['3_z_auto_add_primary_key.sql'])
         def z_auto_add_last_updated_field(self):
-            self.PG.F.triggers_destroy_z_auto_add_last_updated_field()
-            self.PG.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.triggers_destroy_z_auto_add_last_updated_field()
+            self.F.functions_create_batch_groups(sub_dir='sql_functions',
                                                     grps=['admin'],
                                                     files=['4_z_auto_add_last_updated_field.sql'])
         def z_auto_update_timestamp(self,tbl,col):
@@ -673,6 +689,7 @@ class pgSQL:
             return a
 
         def to_sql(cmd):
+            # print(cmd)
             self.T.conn.set_isolation_level(    0)
             self.T.cur.execute(                 cmd)
 
@@ -764,18 +781,24 @@ class pgSQL:
         from time                               import sleep            as delay
         from uuid                               import uuid4            as get_guid
         import                                  requests
-
-        from py_classes.py_classes              import To_Sub_Classes,To_Class,To_Class_Dict
-        T                                   =   To_Class()
-        T.config                            =   To_Class(kwargs,recursive=True)
-        if hasattr(T,'config') and hasattr(T.config,'pgsql'): 
-            T.update(                           T.config.pgsql.__dict__)
-        else:
-            T.update(                           T.config.__dict__)
+        from py_classes                         import To_Sub_Classes,To_Class,To_Class_Dict
+        T                                   =   To_Class(kwargs,recursive=True)
         
+        # PUT ALL KWARGS AS T.config
+        # T.config                            =   To_Class(kwargs,recursive=True)
+
+        if hasattr(T,'config') and hasattr(T.config,'pgsql'): 
+            T.__dict__.update(                  T.config.pgsql.__dict__)
+        if hasattr(T,'config'):
+            T.__dict__.update(                  T.config.__dict__)
+        if hasattr(T,'db_settings'):
+            T.__dict__.update(                  T.db_settings.__dict__)
+
         db_vars = ['DB_NAME','DB_HOST','DB_PORT','DB_USER','DB_PW']
         db_vars = [it for it in db_vars if not T._has_key(it)]
-        
+
+        # import ipdb as I; I.set_trace()
+
         if not db_vars:
             pass
 
