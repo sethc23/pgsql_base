@@ -15,3 +15,4 @@ CREATE FUNCTION file.read(file text)
         RETURN content;
     END;
     $$ LANGUAGE plpgsql VOLATILE;
+
