@@ -5,7 +5,7 @@ exec ""
 class pgSQL_Functions:
     """
 
-    NOTE: USE plpythonu and plluau for WRITE ACCESS
+        NOTE: USE plpythonu and plluau for WRITE ACCESS
 
     """
 
@@ -105,7 +105,7 @@ class pgSQL_Functions:
             self.T.to_sql(qry)
 
         def get_function_info(self,func):
-            qry = """
+            q = """
                 SELECT 
                     proname f_name, 
                     prolang f_lang,
@@ -122,26 +122,186 @@ class pgSQL_Functions:
                 FROM pg_proc 
                 WHERE proname ilike '%s'
                 """ % func
-            return                              self.T.pd.read_sql(qry,self.T.eng)
+            q = """
+                SELECT 
+                    fx_schema,fx_name,fx_lang,fx_type
+                    ,is_volatile,arg_types,_arg_types,arg_defaults
+                    ,return_type,_return_type
+                    ,CASE
+                        WHEN fx_description IS NOT NULL THEN 
+                            CONCAT(
+                                _fx_src
+                                ,'\n\n'
+                                ,'COMMENT ON FUNCTION '
+                                ,fx_name,'(',_types,') IS \n'
+                                ,'''\n'
+                                ,fx_description
+                                ,'\n'';')
+                        ELSE _fx_src
+                    END fx_src
+                FROM 
+                    (
+                    SELECT 
+                        n.nspname fx_schema
+                        ,p.proname fx_name
+                        ,p.prolang fx_lang
+                        ,proisagg is_agg
+                        ,CASE
+                            WHEN provolatile='v' THEN 'true'
+                            ELSE 'false'
+                        END is_volatile
+                        ,pg_catalog.pg_get_function_arguments(p.oid) arg_types
+                        ,p.proargtypes _arg_types
+                        ,p.pronargdefaults arg_defaults
+                        ,pg_catalog.pg_get_function_result(p.oid) return_type
+                        ,p.prorettype _return_type
+                        ,CASE
+                            WHEN p.proisagg THEN 'agg'
+                            WHEN p.proiswindow THEN 'window'
+                            WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype THEN 'trigger'
+                            ELSE 'normal'
+                        END fx_type
+                        ,CONCAT('CREATE OR REPLACE FUNCTION ',p.proname
+                           ,'\n\t(\n\t'
+                                ,regexp_replace(pg_catalog.pg_get_function_arguments(p.oid)
+                                                ,E',[ ]?',E',\n\t','gmsi')
+                                ,'\n\t)'
+                           ,'\nRETURNS ',pg_catalog.pg_get_function_result(p.oid)
+                           ,'\nLANGUAGE ',la.lanname
+                           ,'\nAS $function$ ',p.prosrc,'$function$;'
+                        ) _fx_src
+                        ,d.description fx_description
+                        ,(
+                            SELECT
+                                ARRAY_TO_STRING(ARRAY_AGG(type_name),',') fx_inputs
+                            FROM (
+                                SELECT 
+                                    _oid
+                                    ,r
+                                    ,t.typname type_name
+                                FROM (
+                                    SELECT 
+                                        v::OID _oid
+                                        ,ROW_NUMBER() OVER (PARTITION BY true) r
+                                    FROM 
+                                        (
+                                        select UNNEST(STRING_TO_ARRAY(p.proargtypes::text,' ')) v
+                                        ) f1
+                                    ) f2
+                                INNER JOIN pg_type t ON t.oid=f2._oid
+                                ORDER BY r
+                            ) f3
+                        ) _types
+
+                    FROM 
+                        pg_catalog.pg_proc p
+                        
+                    LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+                    FULL JOIN pg_catalog.pg_language la ON la.oid = p.prolang
+                    FULL JOIN pg_description d on p.oid = d.objoid
+                    FULL JOIN pg_type t on p.prorettype = t.oid
+
+                    WHERE pg_catalog.pg_function_is_visible(p.oid)
+                        AND n.nspname <> 'pg_catalog'
+                        AND n.nspname <> 'information_schema'
+
+                        AND p.proname ~* '%s'
+
+                    ORDER BY 1, 2, 4
+
+                    ) f0
+
+                """ % func
+            return                              self.T.pd.read_sql(q,self.T.eng)
 
         def get_general_function_info(self):
             q = """
-                SELECT n.nspname as "Schema",
-                    p.proname as "f_name",
-                    pg_catalog.pg_get_function_result(p.oid) as "result_type",
-                    pg_catalog.pg_get_function_arguments(p.oid) as "arg_types",
-                    CASE
-                        WHEN p.proisagg THEN 'agg'
-                        WHEN p.proiswindow THEN 'window'
-                        WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype THEN 'trigger'
-                        ELSE 'normal'
-                    END as "f_type"
-                FROM pg_catalog.pg_proc p
-                LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
-                WHERE pg_catalog.pg_function_is_visible(p.oid)
-                    AND n.nspname <> 'pg_catalog'
-                    AND n.nspname <> 'information_schema'
-                ORDER BY 1, 2, 4;
+                SELECT 
+                    fx_schema,fx_name,fx_lang,fx_type
+                    ,is_volatile,arg_types,_arg_types,arg_defaults
+                    ,return_type,_return_type
+                    ,CASE
+                        WHEN fx_description IS NOT NULL THEN 
+                            CONCAT(
+                                _fx_src
+                                ,'\n\n'
+                                ,'COMMENT ON FUNCTION '
+                                ,fx_name,'(',_types,') IS \n'
+                                ,'''\n'
+                                ,fx_description
+                                ,'\n'';')
+                        ELSE _fx_src
+                    END fx_src
+                FROM 
+                    (
+                    SELECT 
+                        n.nspname fx_schema
+                        ,p.proname fx_name
+                        ,p.prolang fx_lang
+                        ,proisagg is_agg
+                        ,CASE
+                            WHEN provolatile='v' THEN 'true'
+                            ELSE 'false'
+                        END is_volatile
+                        ,pg_catalog.pg_get_function_arguments(p.oid) arg_types
+                        ,p.proargtypes _arg_types
+                        ,p.pronargdefaults arg_defaults
+                        ,pg_catalog.pg_get_function_result(p.oid) return_type
+                        ,p.prorettype _return_type
+                        ,CASE
+                            WHEN p.proisagg THEN 'agg'
+                            WHEN p.proiswindow THEN 'window'
+                            WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype THEN 'trigger'
+                            ELSE 'normal'
+                        END fx_type
+                        ,CONCAT('CREATE OR REPLACE FUNCTION ',p.proname
+                           ,'\n\t(\n\t'
+                                ,regexp_replace(pg_catalog.pg_get_function_arguments(p.oid)
+                                                ,E',[ ]?',E',\n\t','gmsi')
+                                ,'\n\t)'
+                           ,'\nRETURNS ',pg_catalog.pg_get_function_result(p.oid)
+                           ,'\nLANGUAGE ',la.lanname
+                           ,'\nAS $function$ ',p.prosrc,'$function$;'
+                        ) _fx_src
+                        ,d.description fx_description
+                        ,(
+                            SELECT
+                                ARRAY_TO_STRING(ARRAY_AGG(type_name),',') fx_inputs
+                            FROM (
+                                SELECT 
+                                    _oid
+                                    ,r
+                                    ,t.typname type_name
+                                FROM (
+                                    SELECT 
+                                        v::OID _oid
+                                        ,ROW_NUMBER() OVER (PARTITION BY true) r
+                                    FROM 
+                                        (
+                                        select UNNEST(STRING_TO_ARRAY(p.proargtypes::text,' ')) v
+                                        ) f1
+                                    ) f2
+                                INNER JOIN pg_type t ON t.oid=f2._oid
+                                ORDER BY r
+                            ) f3
+                        ) _types
+
+                    FROM 
+                        pg_catalog.pg_proc p
+                        
+                    LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+                    FULL JOIN pg_catalog.pg_language la ON la.oid = p.prolang
+                    FULL JOIN pg_description d on p.oid = d.objoid
+                    FULL JOIN pg_type t on p.prorettype = t.oid
+
+                    WHERE pg_catalog.pg_function_is_visible(p.oid)
+                        AND n.nspname <> 'pg_catalog'
+                        AND n.nspname <> 'information_schema'
+
+                    ORDER BY 1, 2, 4
+
+                    ) f0
+
                 """
             return                              self.T.pd.read_sql(q,self.T.eng)
 
@@ -212,10 +372,11 @@ class pgSQL_Functions:
             # cmd_template = ''.join(['psql -d '+self.T.DB_NAME+' -c "%s ' + '%s/%s' % (self.T.pg_classes_pwd,sub_dir) + '/%s/%s;"'
             # sh_cmd_template = 'psql --dbname=%(DB_NAME)s --host=%(DB_HOST)s --port=%(DB_PORT)s --username=%(DB_USER)s --command="%(COMMAND)s"'
             sh_cmd_template = ' '.join(['%(PSQL_PATH)s --dbname=%(DB_NAME)s --host=%(DB_HOST)s',
-                                        '--port=%(DB_PORT)s --username=%(DB_USER)s --file=%(FPATH)s'])
+                                        '--port=%(DB_PORT)s --username=%(DB_USER)s --file=%(FPATH)s;'])
             D = self.T.config.__dict__
-            # D['PSQL_PATH'] = get_psql_path()
-            D['PSQL_PATH'] = "/usr/local/bin/psql"
+            D['PSQL_PATH'] = get_psql_path()
+            # D['PSQL_PATH'] = "/usr/local/pgsql/bin/psql"
+            # D['PSQL_PATH'] = "/usr/local/pgsql/bin/psql"
 
             if one_directory: 
                 dir_list=[]
@@ -258,11 +419,12 @@ class pgSQL_Functions:
             qry = """
                 DO E'#!/bin/sh
 
-                    export PGOPTIONS="--client-min-messages=warning"
+                    export PGOPTIONS="--client-min-messages=warning";
                     %s
                     unset PGOPTIONS
                     ' LANGUAGE plshu;
                 """ % cmds
+            print qry
             self.T.to_sql(qry)
             
 
