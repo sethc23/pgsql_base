@@ -456,7 +456,7 @@ class pgSQL_Functions:
                                                     files=['all'])
         def string_functions(self):
             self.F.functions_destroy_string_functions()
-            self.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.functions_from_command_line(sub_dir='sql_functions',
                                                     grps=['string'],
                                                     files=['all'])
 
@@ -502,7 +502,7 @@ class pgSQL_Functions:
 
         def string_functions(self):
             q,q_temp = [],'DROP FUNCTION IF EXISTS %s(%s) CASCADE;'
-            df = self.F.functions_run_get_all_functions()
+            df = self.F.functions_run_get_general_function_info()
             for i,r in df.iterrows():
                 if str(r.f_name).find('z_str_')==0:
                     arg_types = str([str(it.split()[1]) for it in r.arg_types.split(',')]).strip('[]').replace("'",'')
