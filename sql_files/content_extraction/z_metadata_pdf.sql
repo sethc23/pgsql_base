@@ -41,8 +41,7 @@ CREATE OR REPLACE FUNCTION z_metadata_pdf_2
     )
     RETURNS text
     LANGUAGE plshu
-    AS $function$ 
-    #!/bin/bash
+    AS $function$#!/bin/bash
     pdfinfo -meta $1 2> /dev/null | jq -s -R -c -M -j '[ splits("
     ")? | split(":") as $i | 
     { ($i[0]?) : ( $i[1] | sub("( )+"; ""; "sl") ) } ]'

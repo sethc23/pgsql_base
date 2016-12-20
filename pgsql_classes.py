@@ -373,10 +373,11 @@ class pgSQL_Functions:
             # sh_cmd_template = 'psql --dbname=%(DB_NAME)s --host=%(DB_HOST)s --port=%(DB_PORT)s --username=%(DB_USER)s --command="%(COMMAND)s"'
             sh_cmd_template = ' '.join(['%(PSQL_PATH)s --dbname=%(DB_NAME)s --host=%(DB_HOST)s',
                                         '--port=%(DB_PORT)s --username=%(DB_USER)s --file=%(FPATH)s;'])
-            D = self.T.config.__dict__
+            D = self.T #.config.__dict__
             D['PSQL_PATH'] = get_psql_path()
             # D['PSQL_PATH'] = "/usr/local/pgsql/bin/psql"
             # D['PSQL_PATH'] = "/usr/local/pgsql/bin/psql"
+            new_fxs = []
 
             if one_directory: 
                 dir_list=[]
@@ -392,13 +393,18 @@ class pgSQL_Functions:
                         
                 fpaths = sorted(dir_list)
                 
+                
                 for it in fpaths:
                     D['FPATH'] = it
                     cmds.append( sh_cmd_template % D)
+                    with open(D['FPATH'],'r') as _file:
+                        new_fxs.append(_file.read())
 
             elif one_file:
                 D['FPATH'] = self.T.os.path.abspath(one_file)
                 cmds.append( sh_cmd_template % D)
+                with open(D['FPATH'],'r') as _file:
+                    new_fxs.append(_file.read())
 
             else:
                 files = files if type(files)==list else list(files)
@@ -412,20 +418,29 @@ class pgSQL_Functions:
                                 D['FPATH'] = ''.join([  '%s/%s' % (self.T.pg_classes_pwd,sub_dir),
                                                         '/%s/%s' % (d,f) ])
                                 cmds.append( sh_cmd_template % D )
+                                with open(D['FPATH'],'r') as _file:
+                                    new_fxs.append(_file.read())
 
             # -----------
 
             cmds = '\n'.join(cmds)
-            qry = """
-                DO E'#!/bin/sh
 
-                    export PGOPTIONS="--client-min-messages=warning";
-                    %s
-                    unset PGOPTIONS
-                    ' LANGUAGE plshu;
-                """ % cmds
-            print qry
+            # qry = """
+            #     DO E'
+            #     #!/bin/sh
+
+            #     export PGOPTIONS="--client-min-messages=warning";
+            #     %s
+            #     unset PGOPTIONS
+            #     ' LANGUAGE plshu;
+            #     """ % cmds
+            
+            qry = ';\n\n'.join(it.rstrip(' ;') for it in new_fxs) + ';\n\n'
+            #print qry
+
             self.T.to_sql(qry)
+            
+
             
 
         def z_next_free(self):
