@@ -6,8 +6,6 @@ RETURNS jsonb
 LANGUAGE plpythonu
 AS $function$ 
         import json
-
-        
         import sys, yaml
         import xmltodict
 
