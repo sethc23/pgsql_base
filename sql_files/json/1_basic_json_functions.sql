@@ -17,14 +17,14 @@ CREATE OR REPLACE FUNCTION json_object_update_key(
                          UNION ALL
                         SELECT "key_to_set", to_json("value_to_set")) AS "fields")::json
         END
-        
+
     $function$;
 
 CREATE OR REPLACE FUNCTION json_object_set_path(
-    json json,
-    key_path text[],
+    json JSON,
+    key_path TEXT[],
     value_to_set anyelement)
-    RETURNS json
+    RETURNS JSON
     LANGUAGE 'sql'
     AS $function$
 
@@ -35,7 +35,7 @@ CREATE OR REPLACE FUNCTION json_object_set_path(
                "json",
                "key_path"[l],
                "json_object_set_path"(
-                 COALESCE(NULLIF(("json" -> "key_path"[l])::text, 'null'), '{}')::json,
+                 COALESCE(NULLIF(("json" -> "key_path"[l])::TEXT, 'null'), '{}')::JSON,
                  "key_path"[l+1:u],
                  "value_to_set"
                )
@@ -60,7 +60,7 @@ CREATE OR REPLACE FUNCTION json_object_set_key(
                  WHERE "key" <> "key_to_set"
                  UNION ALL
                 SELECT "key_to_set", to_json("value_to_set")) AS "fields"
-        
+
     $function$;
 
 CREATE OR REPLACE FUNCTION json_object_set_keys(
@@ -219,29 +219,29 @@ CREATE OR REPLACE FUNCTION json_unlint(from_json json)
 
 CREATE OR REPLACE FUNCTION z_json_to_table
     (
-    _idx integer,
-    _json json
+    _idx INTEGER,
+    _json JSON
     )
-    RETURNS SETOF text
-    LANGUAGE plpgsql
-    AS $function$ 
+    RETURNS SETOF TEXT
+    LANGUAGE PLPGSQL
+    AS $FUNCTION$
     BEGIN
         RETURN QUERY
-        SELECT 
+        SELECT
             _i
             ,_key
             ,(_j->_key)::JSON _val
         FROM (
-            SELECT 
-                i _i, 
-                j _j, 
-                json_object_keys(j::json) _key
+            SELECT
+                i _i,
+                j _j,
+                json_object_keys(j::jsOn) _key
             FROM (
-                select 
-                    _idx i, 
-                    _json::json j 
+                select
+                    _idx i,
+                    _json::JSON j
             ) f1
         ) f2;
     END
-    $function$;
+    $FUNCTION$;
 
