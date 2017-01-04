@@ -101,7 +101,15 @@ CREATE OR REPLACE FUNCTION json_append(data json, insert_data json)
             SELECT * FROM json_each(insert_data)
         ) t;
     $$;
- 
+COMMENT ON function json_append(json,json) IS
+    '
+        SELECT json_append(''{"a":"a res"}''::JSON,''{"b":"b res"}''::JSON)
+        --> {"a": "NEW a res","b": "b res"}
+
+        SELECT json_append(''{"a":"a res"}''::JSON,''{"a":"NEW a res"}''::JSON)
+        --> {"a": "NEW a res"}
+    ';
+
 CREATE OR REPLACE FUNCTION json_delete(data json, keys text[])
     RETURNS json
     IMMUTABLE
@@ -113,7 +121,13 @@ CREATE OR REPLACE FUNCTION json_delete(data json, keys text[])
             WHERE key <>ALL(keys)
         ) t;
     $$;
- 
+COMMENT ON function json_delete(json,text[]) IS
+    '
+        SELECT json_delete(''{"a":"a res","b":"b res"}''::JSON,''{"b"}'')
+        --> {"a": "a res"}
+
+    ';
+
 CREATE OR REPLACE FUNCTION json_merge(data json, merge_data json)
     RETURNS json
     IMMUTABLE
@@ -131,7 +145,15 @@ CREATE OR REPLACE FUNCTION json_merge(data json, merge_data json)
             SELECT * FROM to_merge
         ) t;
     $$;
- 
+COMMENT ON function json_merge(json,json) IS
+    '
+        SELECT json_merge(''{"a":"a res"}''::JSON,''{"b":"b res"}''::JSON)
+        --> {"a": "NEW a res","b": "b res"}
+
+        SELECT json_merge(''{"a":"a res"}''::JSON,''{"a":"NEW a res"}''::JSON)
+        --> {"a": "NEW a res"}
+    ';
+
 CREATE OR REPLACE FUNCTION json_update(data json, update_data json)
     RETURNS json
     IMMUTABLE
@@ -151,6 +173,11 @@ CREATE OR REPLACE FUNCTION json_update(data json, update_data json)
         SELECT * FROM to_update
     ) t;
     $$;
+COMMENT ON function json_update(json,json) IS
+    '
+        SELECT json_update(''{"a":"a res"}''::JSON,''{"a":"NEW a res"}''::JSON)
+        --> {''a'': ''NEW a res''}
+    ';
 
 CREATE OR REPLACE FUNCTION json_lint(from_json json, ntab integer DEFAULT 0)
     RETURNS json

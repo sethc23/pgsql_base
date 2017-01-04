@@ -104,6 +104,10 @@ class pgSQL_Functions:
             """ % {'tbl':table_name,'uid_col':uid_col,'sort_by':sort_by}
             self.T.to_sql(qry)
 
+        # TODO: add custom-type handling
+        #   i.e., 
+        #       z_content_spell_check_enum
+        #       "select * from pg_type where oid=294212 or typname='text' or typnamespace=2200 order by typname"
         def get_function_info(self,func):
             q = """
                 SELECT 
@@ -311,7 +315,7 @@ class pgSQL_Functions:
             self                            =   _parent.T.To_Sub_Classes(self,_parent)
 
         def __show_auto_groups(self):
-            (_out,_err) = self.T.sub_popen('ls -p %s/sql_functions/ | grep "/"' % self.T.pg_classes_pwd,
+            (_out,_err) = self.T.sub_popen('ls -p %s/sql_files/ | grep "/"' % self.T.pg_classes_pwd,
                    stdout=self.T.sub_PIPE,
                    shell=True).communicate()
 
@@ -355,18 +359,18 @@ class pgSQL_Functions:
             # Defaults:
             one_file = None if not kwargs.has_key('one_file') else kwargs['one_file']
             one_directory = None if not kwargs.has_key('one_directory') else kwargs['one_directory']
-            sub_dir = 'sql_functions'
-            grps = ['admin','json','strings']
-            files = ['all']
-            regex_exclude = [r'(?iLmsux).*/(_[^\/]+)[.]sql$']
+            sub_dir = 'sql_files' if not kwargs.has_key('sub_dir') else kwargs['sub_dir']
+            grps = ['admin','json','strings'] if not kwargs.has_key('grps') else kwargs['grps']
+            files = ['all'] if not kwargs.has_key('files') else kwargs['files']
+            regex_exclude = [r'(?iLmsux).*/(_[^\/]+)[.]sql$'] if not kwargs.has_key('regex_exclude') else kwargs['regex_exclude']
 
 
-            for name, value in kwargs.iteritems():
-                # import ipdb as I; I.set_trace()
-                if not value.isdigit():
-                    exec '%s = "%s"' % (name, value) in globals(),locals()
-                else:
-                    exec '%s = %s' % (name, value) in globals(),locals()
+            # for name, value in kwargs.iteritems():
+            #     # import ipdb as I; I.set_trace()
+            #     if not value.isdigit():
+            #         exec '%s = "%s"' % (name, value) in globals(),locals()
+            #     else:
+            #         exec '%s = %s' % (name, value) in globals(),locals()
 
             cmds = []
             # cmd_template = ''.join(['psql -d '+self.T.DB_NAME+' -c "%s ' + '%s/%s' % (self.T.pg_classes_pwd,sub_dir) + '/%s/%s;"'
@@ -445,33 +449,33 @@ class pgSQL_Functions:
 
         def z_next_free(self):
             self.F.functions_destroy_z_next_free()
-            self.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.functions_create_from_command_line(sub_dir='sql_files',
                                                     grps=['admin'],
                                                     files=['1_z_next_free.sql'])
         def z_get_seq_value(self):
             self.F.functions_destroy_z_get_seq_value()
-            self.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.functions_create_from_command_line(sub_dir='sql_files',
                                                     grps=['admin'],
                                                     files=['2_z_get_seq_value.sql'])
         def z_array_sort(self):
             self.F.functions_destroy_z_array_sort()
-            self.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.functions_create_from_command_line(sub_dir='sql_files',
                                                     grps=['admin'],
                                                     files=['5_z_array_sort.sql'])
         def z_make_column_primary_serial_key(self):
             self.F.functions_destroy_z_make_column_primary_serial_key()
-            self.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.functions_create_from_command_line(sub_dir='sql_files',
                                                     grps=['admin'],
                                                     files=['6_z_make_column_primary_serial_key.sql'])
 
         def json_functions(self):
             self.F.functions_destroy_json_functions()
-            self.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.functions_create_from_command_line(sub_dir='sql_files',
                                                     grps=['json'],
                                                     files=['all'])
         def string_functions(self):
             self.F.functions_destroy_string_functions()
-            self.F.functions_from_command_line(sub_dir='sql_functions',
+            self.F.functions_from_command_line(sub_dir='sql_files',
                                                     grps=['string'],
                                                     files=['all'])
 
@@ -480,25 +484,25 @@ class pgSQL_Functions:
             self                            =   _parent.T.To_Sub_Classes(self,_parent)
 
         def z_next_free(self):
-            c                               =   """
+            qry                               =   """
                 DROP FUNCTION IF EXISTS z_next_free(text, text, text) CASCADE;
                                             """
             self.T.to_sql(                      qry)
 
         def z_get_seq_value(self):
-            c                               =   """
+            qry                               =   """
                 DROP FUNCTION IF EXISTS z_get_seq_value(text) CASCADE;
                                             """
             self.T.to_sql(                      qry)
 
         def z_array_sort(self):
-            c                               =   """
+            qry                               =   """
                 DROP FUNCTION IF EXISTS z_array_sort(anyarray) CASCADE;
                                             """
             self.T.to_sql(                      qry)
 
         def z_make_column_primary_serial_key(self):
-            c                               =   """
+            qry                               =   """
                 DROP FUNCTION IF EXISTS 
                     z_make_column_primary_serial_key(text,text,boolean,boolean,boolean) CASCADE;
                                             """
@@ -585,12 +589,12 @@ class pgSQL_Triggers:
             self.F.triggers_destroy_z_auto_add_primary_key()
             
             self.F.functions_create_z_next_free()
-            self.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.functions_create_from_command_line(sub_dir='sql_files',
                                                     grps=['admin'],
                                                     files=['3_z_auto_add_primary_key.sql'])
         def z_auto_add_last_updated_field(self):
             self.F.triggers_destroy_z_auto_add_last_updated_field()
-            self.F.functions_create_batch_groups(sub_dir='sql_functions',
+            self.F.functions_create_from_command_line(sub_dir='sql_files',
                                                     grps=['admin'],
                                                     files=['4_z_auto_add_last_updated_field.sql'])
         def z_auto_update_timestamp(self,tbl,col):
@@ -642,9 +646,19 @@ class pgSQL_Triggers:
             self                            =   _parent.T.To_Sub_Classes(self,_parent)
 
         def event_triggers(self):
-            cmd                             =   "select * from pg_event_trigger"
-            self.T.to_sql(                      cmd)
+            qry                             =   "SELECT * FROM pg_event_trigger;"
+            return self.T.pd.read_sql(          qry,self.T.eng)
 
+        def table_triggers(self,table):
+            qry                             =   """
+                                                    SELECT *
+                                                    FROM pg_trigger t
+                                                    INNER JOIN pg_class c 
+                                                    ON t.tgrelid=c.relfilenode
+                                                    WHERE NOT tgisinternal
+                                                    AND relname='%s';
+                                                """ % table
+            return self.T.pd.read_sql(          qry,self.T.eng)
 
     class Operate:
         def __init__(self,_parent):
@@ -1064,7 +1078,7 @@ class pgSQL:
     def __initial_check__(self):
         # at minimum, confirm that geometry is enabled
         self.F.functions_run_confirm_extensions(verbose=False)
-        self.F.functions_create_batch_groups(grps=['admin'])
+        self.F.functions_create_from_command_line(grps=['admin'])
 
         if not self.F.triggers_exists_event_trigger('missing_primary_key_trigger'):
             print 'missing missing_primary_key_trigger'

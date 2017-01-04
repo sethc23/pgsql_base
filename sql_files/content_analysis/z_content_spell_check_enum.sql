@@ -1,3 +1,10 @@
+DROP TYPE IF EXISTS spell_score CASCADE;
+CREATE TYPE spell_score AS
+(
+    mean double precision[],
+    std double precision[]
+);
+
 CREATE OR REPLACE FUNCTION z_content_spell_check_enum
 	(
 	content text[]
