@@ -1,28 +1,28 @@
 CREATE OR REPLACE FUNCTION isdigit(
-    double precision)
-    RETURNS boolean
+    DOUBLE PRECISION)
+    RETURNS BOOLEAN
     LANGUAGE 'sql'
-    AS $function$
+    AS $FUNCTION$
 
-    select $1::text ~ '^(-)?(0[.])?[0-9]+$' as result
+    SELECT $1::TEXT ~ '^(-)?(0[.])?[0-9]+$' AS result
 
-    $function$;
+    $FUNCTION$;
 
 CREATE OR REPLACE FUNCTION isdigit(
-    text)
-    RETURNS boolean
+    TEXT)
+    RETURNS BOOLEAN
     LANGUAGE 'sql'
-    AS $function$
+    AS $FUNCTION$
 
-    select $1::text ~ '^(-)?(0[.])?[0-9]+$' as result
+    SELECT $1::TEXT ~ '^(-)?(0[.])?[0-9]+$' AS result
 
-    $function$;
+    $FUNCTION$;
 
 CREATE OR REPLACE FUNCTION isnumeric(
-    text)
-    RETURNS boolean
+    TEXT)
+    RETURNS BOOLEAN
     LANGUAGE 'plpgsql'
-    AS $function$
+    AS $FUNCTION$
 
     DECLARE x NUMERIC;
     BEGIN
@@ -32,4 +32,4 @@ CREATE OR REPLACE FUNCTION isnumeric(
         RETURN FALSE;
     END;
 
-    $function$;
+    $FUNCTION$;

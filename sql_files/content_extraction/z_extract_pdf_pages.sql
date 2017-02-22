@@ -4,7 +4,7 @@ CREATE OR REPLACE FUNCTION z_extract_pdf_pages
 	)
 RETURNS text[]
 LANGUAGE plpythonu
-AS $function$ 
+AS $function$
 # pg_cnt = "/usr/bin/pdfinfo %s|grep -i pages|sed 's/\D//g'|cut -d ':' -f2|tr -d ' '" % fpath
 pg_cnt = plpy.execute("select (select * from z_pdf_pgcnt('%s')) r" % fpath)[0]['r']
 if pg_cnt:
@@ -12,6 +12,3 @@ if pg_cnt:
 else:
     return None
 $function$;
-
-
-9e46a9adcfc848e1b29161c0957e598e
