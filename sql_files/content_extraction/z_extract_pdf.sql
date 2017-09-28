@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION z_extract_pdf
+CREATE OR REPLACE FUNCTION public.z_extract_pdf
 	(
 	text
 	)

@@ -1,10 +1,10 @@
-CREATE OR REPLACE FUNCTION z_file_exists
+CREATE OR REPLACE FUNCTION public.z_file_exists
 	(
 	fpath text
 	)
 RETURNS boolean
 LANGUAGE plpythonu
-AS $function$ 
+AS $function$
 import os
 return os.path.exists(fpath)
 $function$;

@@ -1,11 +1,11 @@
 
-CREATE OR REPLACE FUNCTION z_get_seq_value
+CREATE OR REPLACE FUNCTION public.z_get_seq_value
     (
     seq_name text
     )
 RETURNS integer
 LANGUAGE plpgsql
-AS $function$ 
+AS $function$
 DECLARE x int;
 BEGIN
     x = currval(seq_name::regclass)+1;

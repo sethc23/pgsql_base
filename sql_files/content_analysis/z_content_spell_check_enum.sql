@@ -1,17 +1,17 @@
-DROP TYPE IF EXISTS spell_score CASCADE;
-CREATE TYPE spell_score AS
+DROP TYPE IF EXISTS public.spell_score CASCADE;
+CREATE TYPE public.spell_score AS
 (
     mean double precision[],
     std double precision[]
 );
 
-CREATE OR REPLACE FUNCTION z_content_spell_check_enum
+CREATE OR REPLACE FUNCTION public.z_content_spell_check_enum
 	(
 	content text[]
 	)
 RETURNS spell_score
 LANGUAGE plpythonu
-AS $function$ 
+AS $function$
 import                                  re
 import                                  enchant as ENCH
 SPELL_DICT                      =       ENCH.Dict("en_US")

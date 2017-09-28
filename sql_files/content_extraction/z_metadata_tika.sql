@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION z_metadata_tika
+CREATE OR REPLACE FUNCTION public.z_metadata_tika
 	(
 	text
 	)

@@ -1,10 +1,10 @@
-CREATE OR REPLACE FUNCTION z_file_metadata
+CREATE OR REPLACE FUNCTION public.z_file_metadata
 	(
 	fpath text
 	)
 RETURNS jsonb
 LANGUAGE plpythonu
-AS $function$ 
+AS $function$
         import json
         import sys, yaml
         import xmltodict
@@ -18,7 +18,7 @@ AS $function$
             assert _err is None
             return _out.rstrip('\n')
 
-        
+
         f_ext = fpath[fpath.rfind('.')+1:]
         d1 = plpy.execute("select z_metadata_tika('"+fpath+"') res")[0]['res']
         try:
@@ -26,7 +26,7 @@ AS $function$
             d1 = d1[0]
         except:
             plpy.info('ERROR: z_file_metadata:d1:eval - fpath: '+fpath)
-            
+
         if f_ext=='pdf':
             plpy.info(fpath)
             r = run_cmd("pdfinfo %s 2>/dev/null | sed 's/" % fpath)
@@ -49,13 +49,13 @@ AS $function$
 
             r = run_cmd('|'.join(["pdfinfo -meta "+fpath+" 2>/dev/null","grep -E \^'[^a-z]'",]))
             mrk = 'Metadata:\n'
-            
-            
+
+
             if not r.find(mrk)==-1:
                 _info = []
                 pt = r.find(mrk)+len(mrk)
                 r2 = r[pt:]
-                
+
                 try:
                     d2 = xmltodict.parse(r2, xml_attribs=False)
                     _info = d2["x:xmpmeta"]["rdf:RDF"]["rdf:Description"]
@@ -72,17 +72,17 @@ AS $function$
                         _info = d2["x:xmpmeta"]["rdf:RDF"]["rdf:Description"]
                     except:
                         plpy.info('ERROR: z_file_metadata: fpath: '+fpath)
-                    
-                
+
+
 
                 for it in _info:
                     try:
                         d1.update(it)
                     except:
                         plpy.info(it)
-        
 
-        
+
+
         return json.dumps(d1,sort_keys=True)
 
 

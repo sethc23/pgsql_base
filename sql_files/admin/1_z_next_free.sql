@@ -1,8 +1,8 @@
 CREATE EXTENSION IF NOT EXISTS plpythonu;
 
 -- Function: z_next_free(text, text, text)
--- DROP FUNCTION IF EXISTS z_next_free(text, text, text) cascade;
-CREATE OR REPLACE FUNCTION z_next_free(
+DROP FUNCTION IF EXISTS public.z_next_free(text, text, text) cascade;
+CREATE OR REPLACE FUNCTION public.z_next_free(
     table_name text,
     uid_col text,
     _seq text)

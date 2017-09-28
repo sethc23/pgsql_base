@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION z_run_cmd
+CREATE OR REPLACE FUNCTION public.z_run_cmd
 	(
 	text
 	)

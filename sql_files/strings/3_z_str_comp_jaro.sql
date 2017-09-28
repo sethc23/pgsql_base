@@ -1,8 +1,8 @@
 
 CREATE EXTENSION IF NOT EXISTS pllua;
 
--- DROP FUNCTION IF EXISTS         z_str_comp_jaro(text,text,boolean,boolean,boolean,boolean);
-CREATE OR REPLACE FUNCTION      z_str_comp_jaro(s1              text,
+-- DROP FUNCTION IF EXISTS         public.z_str_comp_jaro(text,text,boolean,boolean,boolean,boolean);
+CREATE OR REPLACE FUNCTION      public.z_str_comp_jaro(s1              text,
                                                 s2              text,
                                                 winklerize      boolean DEFAULT true,
                                                 long_tolerance  boolean DEFAULT true,
@@ -19,5 +19,5 @@ AS $BODY$
     return t
 
 
-$BODY$ 
+$BODY$
 LANGUAGE plluau;

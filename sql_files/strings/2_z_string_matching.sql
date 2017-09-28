@@ -1,8 +1,8 @@
 
 CREATE EXTENSION IF NOT EXISTS pllua;
 
--- DROP TYPE IF EXISTS str_match_res CASCADE;
-CREATE TYPE z_str_match_res AS (
+DROP TYPE IF EXISTS public.z_str_match_res CASCADE;
+CREATE TYPE public.z_str_match_res AS (
     a_idx TEXT,
     a_str TEXT,
     jaro_score TEXT,
@@ -11,10 +11,10 @@ CREATE TYPE z_str_match_res AS (
     other_matches TEXT
 );
 
--- DROP FUNCTION IF EXISTS         z_str_matching(  text,text,text  );
-CREATE OR REPLACE FUNCTION      z_str_matching(  qry_a text, qry_b text, with_permutations text  )
+-- DROP FUNCTION IF EXISTS         public.z_str_matching(  text,text,text  );
+CREATE OR REPLACE FUNCTION      public.z_str_matching(  qry_a text, qry_b text, with_permutations text  )
 
-RETURNS SETOF z_str_match_res AS $BODY$
+RETURNS SETOF public.z_str_match_res AS $BODY$
 
     package.loaded.string_matching = nil
     str_m = require "string_matching"
@@ -23,7 +23,7 @@ RETURNS SETOF z_str_match_res AS $BODY$
 
 $BODY$ LANGUAGE plluau;
 
-COMMENT ON FUNCTION z_str_matching(  text,text,text  ) IS E'
+COMMENT ON FUNCTION public.z_str_matching(  text,text,text  ) IS E'
     The input querys A and B must provide the aliases (a_str, a_idx),(b_str, b_idx), respectively.
     For each a_str, this function finds the best matching b_str,
         and returns (a_str, a_idx, jaro_score, b_str, b_idx, other_matching).

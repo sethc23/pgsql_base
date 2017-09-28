@@ -2,8 +2,8 @@
 CREATE EXTENSION IF NOT EXISTS plpythonu;
 
 -- Type: public.string_dist_results
--- DROP TYPE IF EXISTS z_str_dist_results CASCADE;
-CREATE TYPE z_str_dist_results AS
+DROP TYPE IF EXISTS public.z_str_dist_results CASCADE;
+CREATE TYPE public.z_str_dist_results AS
    (idx integer,
     orig_str text,
     jaro double precision,
@@ -14,7 +14,7 @@ CREATE TYPE z_str_dist_results AS
     rating_codex text);
 
 
--- DROP FUNCTION IF EXISTS     z_str_jellyfish(            text,
+-- DROP FUNCTION IF EXISTS     public.z_str_jellyfish(            text,
 --                                                     text,
 --                                                     boolean,
 --                                                     boolean,
@@ -24,7 +24,7 @@ CREATE TYPE z_str_dist_results AS
 --                                                     boolean,
 --                                                     boolean) CASCADE;
 
-CREATE OR REPLACE FUNCTION  z_str_jellyfish(            from_str_idx_tuples_qry     text,                  -- having header: | from_tuples    |      
+CREATE OR REPLACE FUNCTION  public.z_str_jellyfish(            from_str_idx_tuples_qry     text,                  -- having header: | from_tuples    |
                                                     against_str_idx_tuples_qry  text,                  -- having header: | against_tuples |
                                                     all_results                 boolean default false,
                                                     best_result                 boolean default true,
@@ -34,7 +34,7 @@ CREATE OR REPLACE FUNCTION  z_str_jellyfish(            from_str_idx_tuples_qry 
                                                     rating_codex                boolean default true,
                                                     usps_repl_first             boolean default true)
 
-RETURNS SETOF z_str_dist_results AS $$
+RETURNS SETOF public.z_str_dist_results AS $$
 
     from jellyfish              import cjellyfish as J
     from traceback              import format_exc       as tb_format_exc
@@ -110,7 +110,7 @@ RETURNS SETOF z_str_dist_results AS $$
 $$ LANGUAGE plpythonu;
 
 
-COMMENT ON FUNCTION z_str_jellyfish( text,text,boolean,boolean,boolean,boolean,boolean,boolean,boolean ) IS E'
+COMMENT ON FUNCTION public.z_str_jellyfish( text,text,boolean,boolean,boolean,boolean,boolean,boolean,boolean ) IS E'
 
     compare_col is concat_ws('' '',...)
 

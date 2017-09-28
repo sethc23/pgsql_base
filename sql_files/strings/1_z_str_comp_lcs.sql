@@ -1,8 +1,8 @@
 
 CREATE EXTENSION IF NOT EXISTS pllua;
 
--- DROP FUNCTION IF EXISTS         z_str_comp_lcs( text,text );
-CREATE OR REPLACE FUNCTION      z_str_comp_lcs( s1              text,
+-- DROP FUNCTION IF EXISTS         public.z_str_comp_lcs( text,text );
+CREATE OR REPLACE FUNCTION      public.z_str_comp_lcs( s1              text,
                                                 s2              text)
 RETURNS                         text
 AS $BODY$
@@ -30,4 +30,4 @@ return res
 
 $BODY$ LANGUAGE plluau;
 
-COMMENT ON FUNCTION z_str_comp_lcs( text,text ) IS 'Longest Common Subsequence';
+COMMENT ON FUNCTION public.z_str_comp_lcs( text,text ) IS 'Longest Common Subsequence';

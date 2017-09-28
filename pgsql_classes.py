@@ -1,5 +1,5 @@
 # from ipdb import set_trace as i_trace
-# i_trace() 
+# i_trace()
 exec ""
 
 class pgSQL_Functions:
@@ -27,7 +27,7 @@ class pgSQL_Functions:
             qry                             =   """
                                                 SELECT *
                                                 FROM pg_event_trigger
-                                                
+
                                                 """
             if only_enabled or only_disabled:
                 _v = 'O' if only_enabled else '1' if only_disabled else None
@@ -65,7 +65,7 @@ class pgSQL_Functions:
             else:
                 is_primary_key              =   True if _info[_info.column_name==uid_col].ix[:,'is_primary_key'].tolist()[0] else False
                 has_default                 =   True if _info[_info.column_name==uid_col].ix[:,'column_default'].tolist()[0] else False
-                
+
 
             T                               =   {'tbl'                  :   table_name,
                                                  'uid_col'              :   uid_col,
@@ -105,13 +105,13 @@ class pgSQL_Functions:
             self.T.to_sql(qry)
 
         # TODO: add custom-type handling
-        #   i.e., 
+        #   i.e.,
         #       z_content_spell_check_enum
         #       "select * from pg_type where oid=294212 or typname='text' or typnamespace=2200 order by typname"
         def get_function_info(self,func):
             q = """
-                SELECT 
-                    proname f_name, 
+                SELECT
+                    proname f_name,
                     prolang f_lang,
                     proisagg is_agg,
                     CASE
@@ -123,16 +123,16 @@ class pgSQL_Functions:
                     pronargdefaults arg_defaults,
                     prorettype return_type,
                     prosrc src
-                FROM pg_proc 
+                FROM pg_proc
                 WHERE proname ilike '%s'
                 """ % func
             q = """
-                SELECT 
+                SELECT
                     fx_schema,fx_name,fx_lang,fx_type
                     ,is_volatile,arg_types,_arg_types,arg_defaults
                     ,return_type,_return_type
                     ,CASE
-                        WHEN fx_description IS NOT NULL THEN 
+                        WHEN fx_description IS NOT NULL THEN
                             CONCAT(
                                 _fx_src
                                 ,'\n\n'
@@ -143,9 +143,9 @@ class pgSQL_Functions:
                                 ,'\n'';')
                         ELSE _fx_src
                     END fx_src
-                FROM 
+                FROM
                     (
-                    SELECT 
+                    SELECT
                         n.nspname fx_schema
                         ,p.proname fx_name
                         ,p.prolang fx_lang
@@ -179,15 +179,15 @@ class pgSQL_Functions:
                             SELECT
                                 ARRAY_TO_STRING(ARRAY_AGG(type_name),',') fx_inputs
                             FROM (
-                                SELECT 
+                                SELECT
                                     _oid
                                     ,r
                                     ,t.typname type_name
                                 FROM (
-                                    SELECT 
+                                    SELECT
                                         v::OID _oid
                                         ,ROW_NUMBER() OVER (PARTITION BY true) r
-                                    FROM 
+                                    FROM
                                         (
                                         select UNNEST(STRING_TO_ARRAY(p.proargtypes::text,' ')) v
                                         ) f1
@@ -197,9 +197,9 @@ class pgSQL_Functions:
                             ) f3
                         ) _types
 
-                    FROM 
+                    FROM
                         pg_catalog.pg_proc p
-                        
+
                     LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
                     FULL JOIN pg_catalog.pg_language la ON la.oid = p.prolang
                     FULL JOIN pg_description d on p.oid = d.objoid
@@ -220,12 +220,12 @@ class pgSQL_Functions:
 
         def get_general_function_info(self):
             q = """
-                SELECT 
+                SELECT
                     fx_schema,fx_name,fx_lang,fx_type
                     ,is_volatile,arg_types,_arg_types,arg_defaults
                     ,return_type,_return_type
                     ,CASE
-                        WHEN fx_description IS NOT NULL THEN 
+                        WHEN fx_description IS NOT NULL THEN
                             CONCAT(
                                 _fx_src
                                 ,'\n\n'
@@ -236,9 +236,9 @@ class pgSQL_Functions:
                                 ,'\n'';')
                         ELSE _fx_src
                     END fx_src
-                FROM 
+                FROM
                     (
-                    SELECT 
+                    SELECT
                         n.nspname fx_schema
                         ,p.proname fx_name
                         ,p.prolang fx_lang
@@ -272,15 +272,15 @@ class pgSQL_Functions:
                             SELECT
                                 ARRAY_TO_STRING(ARRAY_AGG(type_name),',') fx_inputs
                             FROM (
-                                SELECT 
+                                SELECT
                                     _oid
                                     ,r
                                     ,t.typname type_name
                                 FROM (
-                                    SELECT 
+                                    SELECT
                                         v::OID _oid
                                         ,ROW_NUMBER() OVER (PARTITION BY true) r
-                                    FROM 
+                                    FROM
                                         (
                                         select UNNEST(STRING_TO_ARRAY(p.proargtypes::text,' ')) v
                                         ) f1
@@ -290,9 +290,9 @@ class pgSQL_Functions:
                             ) f3
                         ) _types
 
-                    FROM 
+                    FROM
                         pg_catalog.pg_proc p
-                        
+
                     LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
                     FULL JOIN pg_catalog.pg_language la ON la.oid = p.prolang
                     FULL JOIN pg_description d on p.oid = d.objoid
@@ -320,11 +320,11 @@ class pgSQL_Functions:
                    shell=True).communicate()
 
             assert _err is None
-            print _out            
+            print _out
 
         def from_command_line(self,**kwargs):
             """
-                :param one_directory: The absolute directory path or directory path relative to the primary module 
+                :param one_directory: The absolute directory path or directory path relative to the primary module
                 from which the files are loaded in simple sort order. NOTE. IF DEFINED, OTHER PATH PARAMS IGNORED.
                 :type one_directory: str.
 
@@ -341,9 +341,24 @@ class pgSQL_Functions:
                 :type files: list.
 
                 :param regex_exclude: A list of files matching provided regex and excluded from loading.
-                :type files: list.         
+                :type files: list.
+
+                :param schema: Destination schema.
+                :type files: str.
+                :default: "public"
 
                 :returns:  None
+
+                # pg.F.functions_run_confirm_extensions()
+
+                # pg.C.Functions_Create.from_command_line(sub_dir='admin')
+                # pg.C.Functions_Create.from_command_line(sub_dir='json')
+                # pg.C.Functions_Create.from_command_line(sub_dir='strings')
+                # pg.C.Functions_Create.from_command_line(sub_dir='data_typing')
+                # pg.C.Functions_Create.from_command_line(sub_dir='content_extraction')
+                # pg.C.Functions_Create.from_command_line(sub_dir='content_analysis')
+                # pg.C.Functions_Create.from_command_line(one_directory="/home/ub2/SERVER2/file_server/pgsql/sql_files/3_functions")
+
 
             """
             def get_psql_path():
@@ -360,9 +375,10 @@ class pgSQL_Functions:
             one_file = None if not kwargs.has_key('one_file') else kwargs['one_file']
             one_directory = None if not kwargs.has_key('one_directory') else kwargs['one_directory']
             sub_dir = 'sql_files' if not kwargs.has_key('sub_dir') else kwargs['sub_dir']
-            grps = ['admin','json','strings'] if not kwargs.has_key('grps') else kwargs['grps']
+            # grps = ['admin','json','strings'] if not kwargs.has_key('grps') else kwargs['grps']
             files = ['all'] if not kwargs.has_key('files') else kwargs['files']
             regex_exclude = [r'(?iLmsux).*/(_[^\/]+)[.]sql$'] if not kwargs.has_key('regex_exclude') else kwargs['regex_exclude']
+            schema = "public" if not kwargs.has_key('schema') else kwargs['schema']
 
 
             # for name, value in kwargs.iteritems():
@@ -377,13 +393,14 @@ class pgSQL_Functions:
             # sh_cmd_template = 'psql --dbname=%(DB_NAME)s --host=%(DB_HOST)s --port=%(DB_PORT)s --username=%(DB_USER)s --command="%(COMMAND)s"'
             sh_cmd_template = ' '.join(['%(PSQL_PATH)s --dbname=%(DB_NAME)s --host=%(DB_HOST)s',
                                         '--port=%(DB_PORT)s --username=%(DB_USER)s --file=%(FPATH)s;'])
+
             D = self.T #.config.__dict__
             D['PSQL_PATH'] = get_psql_path()
             # D['PSQL_PATH'] = "/usr/local/pgsql/bin/psql"
             # D['PSQL_PATH'] = "/usr/local/pgsql/bin/psql"
             new_fxs = []
 
-            if one_directory: 
+            if one_directory:
                 dir_list=[]
                 for root, sub_dirs, files in self.T.os.walk(self.T.os.path.abspath(one_directory)):
                     for f in files:
@@ -394,10 +411,10 @@ class pgSQL_Functions:
                             for regex in regex_exclude:
                                 if type(self.T.re.match(regex,fpath))==self.T.NoneType:
                                     dir_list.append(fpath)
-                        
+
                 fpaths = sorted(dir_list)
-                
-                
+
+
                 for it in fpaths:
                     D['FPATH'] = it
                     cmds.append( sh_cmd_template % D)
@@ -412,22 +429,42 @@ class pgSQL_Functions:
 
             else:
                 files = files if type(files)==list else list(files)
-                for d in grps:
-                    for f in sorted(self.T.os.listdir('%s/%s/%s' % (self.T.pg_classes_pwd,sub_dir,d))):
-                        if f.count('.sql'):
-                            if files.count(f) or files==['all']:
+                # for d in grps:
+                for f in sorted(self.T.os.listdir('%s/%s/%s' % (self.T.pg_classes_pwd,'sql_files',sub_dir))):
+                    if f.count('.sql'):
+                        if files.count(f) or files==['all']:
 
-                                # cmds.append( cmd_template % ('\\\\\\\\i',d,f) )
+                            # cmds.append( cmd_template % ('\\\\\\\\i',d,f) )
 
-                                D['FPATH'] = ''.join([  '%s/%s' % (self.T.pg_classes_pwd,sub_dir),
-                                                        '/%s/%s' % (d,f) ])
-                                cmds.append( sh_cmd_template % D )
-                                with open(D['FPATH'],'r') as _file:
-                                    new_fxs.append(_file.read())
+                            D['FPATH'] = ''.join([  '%s/%s/%s' % (self.T.pg_classes_pwd,'sql_files',sub_dir),
+                                                    '/%s' % (f) ])
+                            cmds.append( sh_cmd_template % D )
+                            with open(D['FPATH'],'r') as _file:
+                                new_fxs.append(_file.read())
 
             # -----------
+            if schema!='public':
+                repl_new_fxs = []
+                schema = self.T.re.compile(r'(?sux)^([A-Z\s\-]*)(DROP|CREATE|EXECUTE|FUNCTION|RETURNS)(.*)(public[.])(.*)')
+                for i in range(len(new_fxs)):
+                    fx = new_fxs[i]
+                    _str = ""
+                    _iter = fx.split('\n')
+                    for l in _iter:
+                        if self.T.re.match(schema,l):
+                            _str += self.T.re.sub(schema,r'\1\2\3emacs.\5',l)
+                        else:
+                            _str += l
+                        _str += '\n'
+                    repl_new_fxs.append(_str.strip('\n'))
+                new_fxs = repl_new_fxs
 
-            cmds = '\n'.join(cmds)
+            # cmds = '\n'.join(cmds)
+
+            # print(cmds)
+            # print('\n\n')
+            # # print(new_fxs)
+            # return new_fxs
 
             # qry = """
             #     DO E'
@@ -438,14 +475,28 @@ class pgSQL_Functions:
             #     unset PGOPTIONS
             #     ' LANGUAGE plshu;
             #     """ % cmds
-            
-            qry = ';\n\n'.join(it.rstrip(' ;') for it in new_fxs) + ';\n\n'
-            #print qry
 
-            self.T.to_sql(qry)
-            
+            failed = []
+            for qry in new_fxs:
+                # qry = ';\n\n'.join(it.rstrip(' ;') for it in new_fxs) + ';\n\n'
 
-            
+
+
+                try:
+                    self.T.to_sql(qry)
+                except:
+                    failed.append(qry)
+                    # print qry
+                    # with open('/tmp/qry','w') as f:
+                        # f.write(qry)
+
+                    # self.T.to_sql(qry)
+            if failed:
+                print("\n\nSOME FUNCTIONS WERE NOT CREATED\n\n")
+                return failed
+
+
+
 
         def z_next_free(self):
             self.F.functions_destroy_z_next_free()
@@ -503,7 +554,7 @@ class pgSQL_Functions:
 
         def z_make_column_primary_serial_key(self):
             qry                               =   """
-                DROP FUNCTION IF EXISTS 
+                DROP FUNCTION IF EXISTS
                     z_make_column_primary_serial_key(text,text,boolean,boolean,boolean) CASCADE;
                                             """
             self.T.to_sql(                      qry)
@@ -550,7 +601,7 @@ class pgSQL_Triggers:
             qry                             =   """
                                                 SELECT EXISTS (SELECT 1
                                                     FROM pg_trigger t
-                                                    INNER JOIN pg_class c 
+                                                    INNER JOIN pg_class c
                                                     ON t.tgrelid=c.relfilenode
                                                     WHERE NOT tgisinternal
                                                     AND relname='%s'
@@ -572,7 +623,7 @@ class pgSQL_Triggers:
             qry                             =   """
                                                 SELECT EXISTS (SELECT 1
                                                     FROM pg_trigger t
-                                                    INNER JOIN pg_class c 
+                                                    INNER JOIN pg_class c
                                                     ON t.tgrelid=c.relfilenode
                                                     WHERE NOT tgisinternal
                                                     AND relname='%s'
@@ -587,7 +638,7 @@ class pgSQL_Triggers:
 
         def z_auto_add_primary_key(self):
             self.F.triggers_destroy_z_auto_add_primary_key()
-            
+
             self.F.functions_create_z_next_free()
             self.F.functions_create_from_command_line(sub_dir='sql_files',
                                                     grps=['admin'],
@@ -653,7 +704,7 @@ class pgSQL_Triggers:
             qry                             =   """
                                                     SELECT *
                                                     FROM pg_trigger t
-                                                    INNER JOIN pg_class c 
+                                                    INNER JOIN pg_class c
                                                     ON t.tgrelid=c.relfilenode
                                                     WHERE NOT tgisinternal
                                                     AND relname='%s';
@@ -706,7 +757,7 @@ class pgSQL_Tables:
                                                     AND    i.indisprimary
                                                     ),
                                                 gen_info AS (
-                                                    SELECT 
+                                                    SELECT
                                                         column_name
                                                         ,data_type
                                                         ,udt_name
@@ -714,13 +765,13 @@ class pgSQL_Tables:
                                                         ,column_default
                                                         ,CASE
                                                             WHEN data_type_pk is NULL THEN NULL
-                                                            ELSE true 
+                                                            ELSE true
                                                         END is_primary_key
                                                         ,is_nullable
                                                     FROM INFORMATION_SCHEMA.COLUMNS
                                                     LEFT JOIN primary_key_info pk ON pk.attname = column_name
                                                     WHERE table_name = '%s'
-                                                    )    
+                                                    )
                                                 SELECT * FROM gen_info;
 
                                                 """ % (tbl_name,tbl_name)
@@ -741,7 +792,7 @@ class pgSQL_Tables:
                                                         tgnargs arg_str_cnt,
                                                         tgargs arg_strs
                                                 FROM pg_trigger t
-                                                INNER JOIN pg_class c 
+                                                INNER JOIN pg_class c
                                                 ON t.tgrelid=c.relfilenode
                                                 WHERE NOT tgisinternal
                                                 AND relname='%s';
@@ -846,7 +897,7 @@ class pgSQL_Types:
             self.T.to_sql(                  qry)
 
 class pgSQL:
-    
+
 
     def __init__(self,**kwargs):
         """
@@ -988,11 +1039,11 @@ class pgSQL:
         import                                  requests
         from py_classes                         import To_Sub_Classes,To_Class,To_Class_Dict
         T                                   =   To_Class(kwargs,recursive=True)
-        
+
         # PUT ALL KWARGS AS T.config
         # T.config                            =   To_Class(kwargs,recursive=True)
 
-        if hasattr(T,'config') and hasattr(T.config,'pgsql'): 
+        if hasattr(T,'config') and hasattr(T.config,'pgsql'):
             T.__dict__.update(                  T.config.pgsql.__dict__)
         if hasattr(T,'config'):
             T.__dict__.update(                  T.config.__dict__)
@@ -1011,12 +1062,12 @@ class pgSQL:
             DB_NAME,DB_USER,DB_PW,DB_HOST,DB_PORT = db_settings
             for it in db_vars:
                 eval('T["%s"] = %s' % (it,it))
-            
+
         else:
             z = eval("__import__('db_settings')")
             for it in db_vars:
                 T[it] = getattr(z,it)
-        
+
         import                                  pandas                  as pd
         pd.set_option(                          'expand_frame_repr', False)
         pd.set_option(                          'display.max_columns', None)
@@ -1069,7 +1120,7 @@ class pgSQL:
         # if hasattr(T,'project_sql_files') and T.project_sql_files:
         #     self.F.functions_create_from_command_line(one_directory=T.project_sql_files)
         # if hasattr(T,'base_sql_files') and T.base_sql_files:
-        #     self.F.functions_create_from_command_line(one_directory=T.base_sql_files)  
+        #     self.F.functions_create_from_command_line(one_directory=T.base_sql_files)
         if hasattr(T,'initial_check') and T.initial_check:
             self.__initial_check__()
         if hasattr(T,'temp_options') and T.temp_options:

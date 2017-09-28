@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION z_pdftotext
+CREATE OR REPLACE FUNCTION public.z_pdftotext
 	(
 	text
 	)

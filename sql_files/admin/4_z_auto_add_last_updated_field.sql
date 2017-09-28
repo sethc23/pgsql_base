@@ -1,7 +1,7 @@
 
 -- Trigger Function: z_auto_add_last_updated_field()
-DROP FUNCTION if exists z_auto_add_last_updated_field() cascade;
-CREATE OR REPLACE FUNCTION z_auto_add_last_updated_field()
+DROP FUNCTION IF EXISTS public.z_auto_add_last_updated_field() CASCADE;
+CREATE OR REPLACE FUNCTION public.z_auto_add_last_updated_field()
   RETURNS event_trigger AS
 $BODY$
 DECLARE
@@ -52,4 +52,4 @@ DROP EVENT TRIGGER if exists missing_last_updated_field;
 CREATE EVENT TRIGGER missing_last_updated_field
 ON ddl_command_end
 WHEN TAG IN ('CREATE TABLE','CREATE TABLE AS')
-EXECUTE PROCEDURE z_auto_add_last_updated_field();
+EXECUTE PROCEDURE public.z_auto_add_last_updated_field();

@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION z_extract_pdf_slice
+CREATE OR REPLACE FUNCTION public.z_extract_pdf_slice
 	(
 	text,
 	integer,

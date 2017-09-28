@@ -1,6 +1,6 @@
-DROP FUNCTION IF EXISTS json_object_set_keys(json,text[],anyarray);
+DROP FUNCTION IF EXISTS public.json_object_set_keys(json,text[],anyarray);
 
-CREATE OR REPLACE FUNCTION json_object_update_key(
+CREATE OR REPLACE FUNCTION public.json_object_update_key(
     json json,
     key_to_set text,
     value_to_set anyelement)
@@ -20,7 +20,7 @@ CREATE OR REPLACE FUNCTION json_object_update_key(
 
     $function$;
 
-CREATE OR REPLACE FUNCTION json_object_set_path(
+CREATE OR REPLACE FUNCTION public.json_object_set_path(
     json JSON,
     key_path TEXT[],
     value_to_set anyelement)
@@ -46,7 +46,7 @@ CREATE OR REPLACE FUNCTION json_object_set_path(
 
     $function$;
 
-CREATE OR REPLACE FUNCTION json_object_set_key(
+CREATE OR REPLACE FUNCTION public.json_object_set_key(
     json json,
     key_to_set text,
     value_to_set anyelement)
@@ -63,7 +63,7 @@ CREATE OR REPLACE FUNCTION json_object_set_key(
 
     $function$;
 
-CREATE OR REPLACE FUNCTION json_object_set_keys(
+CREATE OR REPLACE FUNCTION public.json_object_set_keys(
     "json"          json,
     "keys_to_set"   TEXT[],
     "values_to_set" anyarray
@@ -89,7 +89,7 @@ CREATE OR REPLACE FUNCTION json_object_set_keys(
          USING ("index")) AS "fields"
     $function$;
 
-CREATE OR REPLACE FUNCTION json_append(data json, insert_data json)
+CREATE OR REPLACE FUNCTION public.json_append(data json, insert_data json)
     RETURNS json
     IMMUTABLE
     LANGUAGE sql
@@ -101,7 +101,7 @@ CREATE OR REPLACE FUNCTION json_append(data json, insert_data json)
             SELECT * FROM json_each(insert_data)
         ) t;
     $$;
-COMMENT ON function json_append(json,json) IS
+COMMENT ON function public.json_append(json,json) IS
     '
         SELECT json_append(''{"a":"a res"}''::JSON,''{"b":"b res"}''::JSON)
         --> {"a": "NEW a res","b": "b res"}
@@ -110,7 +110,7 @@ COMMENT ON function json_append(json,json) IS
         --> {"a": "NEW a res"}
     ';
 
-CREATE OR REPLACE FUNCTION json_delete(data json, keys text[])
+CREATE OR REPLACE FUNCTION public.json_delete(data json, keys text[])
     RETURNS json
     IMMUTABLE
     LANGUAGE sql
@@ -121,14 +121,14 @@ CREATE OR REPLACE FUNCTION json_delete(data json, keys text[])
             WHERE key <>ALL(keys)
         ) t;
     $$;
-COMMENT ON function json_delete(json,text[]) IS
+COMMENT ON function public.json_delete(json,text[]) IS
     '
         SELECT json_delete(''{"a":"a res","b":"b res"}''::JSON,''{"b"}'')
         --> {"a": "a res"}
 
     ';
 
-CREATE OR REPLACE FUNCTION json_merge(data json, merge_data json)
+CREATE OR REPLACE FUNCTION public.json_merge(data json, merge_data json)
     RETURNS json
     IMMUTABLE
     LANGUAGE sql
@@ -145,7 +145,7 @@ CREATE OR REPLACE FUNCTION json_merge(data json, merge_data json)
             SELECT * FROM to_merge
         ) t;
     $$;
-COMMENT ON function json_merge(json,json) IS
+COMMENT ON function public.json_merge(json,json) IS
     '
         SELECT json_merge(''{"a":"a res"}''::JSON,''{"b":"b res"}''::JSON)
         --> {"a": "NEW a res","b": "b res"}
@@ -154,7 +154,7 @@ COMMENT ON function json_merge(json,json) IS
         --> {"a": "NEW a res"}
     ';
 
-CREATE OR REPLACE FUNCTION json_update(data json, update_data json)
+CREATE OR REPLACE FUNCTION public.json_update(data json, update_data json)
     RETURNS json
     IMMUTABLE
     LANGUAGE sql
@@ -173,13 +173,13 @@ CREATE OR REPLACE FUNCTION json_update(data json, update_data json)
         SELECT * FROM to_update
     ) t;
     $$;
-COMMENT ON function json_update(json,json) IS
+COMMENT ON function public.json_update(json,json) IS
     '
         SELECT json_update(''{"a":"a res"}''::JSON,''{"a":"NEW a res"}''::JSON)
         --> {''a'': ''NEW a res''}
     ';
 
-CREATE OR REPLACE FUNCTION json_lint(from_json json, ntab integer DEFAULT 0)
+CREATE OR REPLACE FUNCTION public.json_lint(from_json json, ntab integer DEFAULT 0)
     RETURNS json
     LANGUAGE sql
     IMMUTABLE STRICT
@@ -198,7 +198,7 @@ CREATE OR REPLACE FUNCTION json_lint(from_json json, ntab integer DEFAULT 0)
     END)::json
     $$;
 
-CREATE OR REPLACE FUNCTION json_unlint(from_json json)
+CREATE OR REPLACE FUNCTION public.json_unlint(from_json json)
     RETURNS json
     LANGUAGE sql
     IMMUTABLE STRICT
@@ -217,7 +217,7 @@ CREATE OR REPLACE FUNCTION json_unlint(from_json json)
     END)::json
     $$;
 
-CREATE OR REPLACE FUNCTION z_json_to_table
+CREATE OR REPLACE FUNCTION public.z_json_to_table
     (
     _idx INTEGER,
     _json JSON

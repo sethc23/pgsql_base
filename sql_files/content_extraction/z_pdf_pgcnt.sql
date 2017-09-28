@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION z_pdf_pgcnt
+CREATE OR REPLACE FUNCTION public.z_pdf_pgcnt
 	(
 	text
 	)

@@ -1,10 +1,10 @@
-CREATE OR REPLACE FUNCTION z_metadata_pdf
+CREATE OR REPLACE FUNCTION public.z_metadata_pdf
 	(
 	fpath text
 	)
 RETURNS jsonb
 LANGUAGE plpythonu
-AS $function$ 
+AS $function$
 
         import sys, yaml, json
         import xmltodict
@@ -35,7 +35,7 @@ AS $function$
 
     $function$;
 
-CREATE OR REPLACE FUNCTION z_metadata_pdf_2
+CREATE OR REPLACE FUNCTION public.z_metadata_pdf_2
     (
     text
     )
@@ -43,6 +43,6 @@ CREATE OR REPLACE FUNCTION z_metadata_pdf_2
     LANGUAGE plshu
     AS $function$#!/bin/bash
     pdfinfo -meta $1 2> /dev/null | jq -s -R -c -M -j '[ splits("
-    ")? | split(":") as $i | 
+    ")? | split(":") as $i |
     { ($i[0]?) : ( $i[1] | sub("( )+"; ""; "sl") ) } ]'
     $function$;
